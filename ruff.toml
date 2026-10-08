@@ -1,0 +1,33 @@
+# ruff 配置
+#
+# 背景：此前 CI 直接运行 `ruff check` 而未提供配置文件，规则集完全取决于
+# 安装到的 ruff 版本；较新版本默认启用的规则会在这个代码库上报出大量
+# 既有告警，导致 lint 任务长期失败。此处显式固定规则集，让结果可复现。
+#
+# 规则集刻意保持克制：只启用 pycodestyle 错误 + Pyflakes（E4/E7/E9/F），
+# 它们几乎全部对应真实缺陷，而不是风格偏好。更严格的规则（I/B/UP/ASYNC/
+# BLE/S 等）留待后续单独一轮整改。
+
+target-version = "py312"
+line-length = 120
+
+# run.ipynb is an exploratory notebook rather than application code. Keep it
+# outside the repository-wide lint surface so CI focuses on maintained Python.
+extend-exclude = ["run.ipynb"]
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    # 循环导入防护、可选依赖、异常类收集等场景需要宽泛捕获，
+    # 且 BLE/S110 属于更严格的规则集，本轮不启用。
+]
+
+[lint.per-file-ignores]
+# 包的 __init__.py 承担 re-export 职责，被 re-export 的名字在文件内
+# 必然"未被使用"，这是既有约定而非缺陷。
+"**/__init__.py" = ["F401"]
+# mcp/tool_server.py 需要在导入后注册 MCP 工具，属有意为之
+"deep_research/mcp/tool_server.py" = ["F401"]
+
+[lint.isort]
+known-first-party = ["deep_research", "backend"]

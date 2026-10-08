@@ -1,0 +1,48 @@
+# Local configuration / credentials
+.env
+.env.*
+!.env.example
+config.yml
+*.pem
+*.key
+
+# Runtime state
+data/
+logs/
+artifacts/
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Jupyter / editors / OS
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# JavaScript (optional external UI clients)
+node_modules/
+.next/
+
+# Test-generated local memory sandboxes
+memory3-offline-*/
+offline-memory-*/

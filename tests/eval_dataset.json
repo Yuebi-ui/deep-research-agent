@@ -1,0 +1,79 @@
+{
+  "description": "评估数据集 — 典型研究 Query + 预期覆盖点，用于 Prompt A/B 测试和模型对比",
+  "version": "1.0",
+  "cases": [
+    {
+      "id": "eval_001",
+      "query": "2025年AI Agent框架的发展趋势是什么？",
+      "language": "zh",
+      "expected_aspects": [
+        "主流Agent框架介绍（LangGraph/CrewAI/AutoGen等）",
+        "多Agent协作模式的演进",
+        "Agent与RAG的结合",
+        "工具调用/Function Calling的标准化",
+        "开源vs商业Agent框架的对比"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "eval_002",
+      "query": "什么是检索增强生成（RAG）？它如何减少大模型幻觉？",
+      "language": "zh",
+      "expected_aspects": [
+        "RAG的定义和基本原理",
+        "检索模块的工作方式",
+        "生成模块如何利用检索结果",
+        "RAG减少幻觉的机制（外部知识约束）",
+        "RAG的局限性"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "eval_003",
+      "query": "比较 OpenAI 和 Anthropic 在 AI Safety 方面的做法",
+      "language": "zh",
+      "expected_aspects": [
+        "OpenAI的safety策略（RLHF/红队测试/内容过滤）",
+        "Anthropic的Constitutional AI方法",
+        "两者的异同点对比",
+        "各自的安全事故和应对",
+        "行业影响和监管趋势"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "eval_004",
+      "query": "大模型推理优化的最新技术有哪些？",
+      "language": "zh",
+      "expected_aspects": [
+        "量化技术（GPTQ/AWQ等）",
+        "KV Cache优化",
+        "Speculative Decoding",
+        "Flash Attention系列",
+        "MoE推理优化",
+        "推理成本对比"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "eval_005",
+      "query": "List the top 5 open-source LLM evaluation benchmarks in 2025",
+      "language": "en",
+      "expected_aspects": [
+        "MMLU and its variants",
+        "HumanEval / MBPP for code",
+        "Chatbot Arena / LMSYS",
+        "HELM by Stanford",
+        "BIG-bench / specific domain benchmarks"
+      ],
+      "complexity": "low"
+    }
+  ],
+  "metrics": {
+    "coverage": "预期覆盖点命中率 = (命中的 expected_aspects) / total",
+    "hallucination_rate": "Claim Verification 幻觉率",
+    "evaluator_score": "Self-evolution evaluator 三维均分",
+    "cost_rmb": "单次研究总费用",
+    "latency_seconds": "从start到complete的总时长"
+  }
+}

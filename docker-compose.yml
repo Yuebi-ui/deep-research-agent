@@ -1,0 +1,85 @@
+# GitHub/portfolio runtime topology. The repository is API-first; no frontend
+# source tree is bundled in this snapshot.
+#
+# Prerequisite:
+#   cp config.server.example.yml config.yml
+#
+# For real providers, use config.hybrid.example.yml as a template and keep keys
+# out of the repository.
+
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: .
+    command:
+      - sh
+      - -c
+      - "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+      - ./data:/app/data
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      STAGE: ${STAGE:-prod}
+      CONFIG_PATH: /app/config.yml
+      CHECKPOINTER_BACKEND: redis
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["python", "-m", "backend.worker"]
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+      - ./data:/app/data
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      STAGE: ${STAGE:-prod}
+      CONFIG_PATH: /app/config.yml
+      CHECKPOINTER_BACKEND: redis
+      # Dedicated memory-worker owns the outbox in this Compose topology.
+      DR_MEMORY_OUTBOX_POLL_ON_WORKER: "off"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  memory-worker:
+    build: .
+    command: ["python", "-m", "backend.memory_worker"]
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+      - ./data:/app/data
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      STAGE: ${STAGE:-prod}
+      CONFIG_PATH: /app/config.yml
+      DR_MEMORY_OUTBOX_ENABLED: "on"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:
