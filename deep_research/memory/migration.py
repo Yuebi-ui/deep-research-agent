@@ -26,7 +26,6 @@ from chromadb.errors import NotFoundError
 from deep_research.memory.embeddings import MAX_BATCH_SIZE, EmbeddingClient, EmbeddingIdentity
 from deep_research.memory.schema_guard import (
     DEFAULT_SPACE,
-    EmbeddingSpaceMismatchError,
     MemorySchemaError,
     open_managed_collection,
 )

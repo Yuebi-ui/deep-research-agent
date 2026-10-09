@@ -13,7 +13,6 @@ import importlib.util
 from pathlib import Path
 
 import chromadb
-import pytest
 from chromadb.config import Settings as ChromaSettings
 
 from deep_research.memory.embeddings import EmbeddingIdentity

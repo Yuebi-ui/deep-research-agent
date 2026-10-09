@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 import sys
 import json
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -216,7 +215,7 @@ def run():
         assert len(model.calls) == before  # all section windows are already complete
         assert mgr.get_full_report(rid) == report
         prior = MemoryManager(persist_dir="memory3-offline-legacy")
-        p2 = prior._store.add_memory("old", "旧报告摘要", {"structured_status": "complete", "structured_version": 2})
+        prior._store.add_memory("old", "旧报告摘要", {"structured_status": "complete", "structured_version": 2})
         assert prior.get_full_report("old") is None
         assert "旧报告摘要" in prior.retrieve_context("旧报告", top_k=1)
     check("Phase123 metadata upgrade, legacy report retrieval without invented full content", backward)
@@ -313,7 +312,9 @@ def run():
     check("Context compiler enforces its maximum without suffix overflow", context_ceiling)
 
     def cli_dry_run():
-        import sqlite3, subprocess, tempfile
+        import sqlite3
+        import subprocess
+        import tempfile
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "tasks.db"
             db = sqlite3.connect(db_path)

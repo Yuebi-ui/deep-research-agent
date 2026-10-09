@@ -35,8 +35,9 @@ def _clean_text(value: object, limit: int) -> str:
     cleaned = re.sub(r"[\x00-\x1f\x7f]+", " ", value).strip()
     # Best-effort removal of common credentials in tool queries. Not a substitute
     # for tenant-scoped retention policies or an upstream PII/sensitive-data filter.
-    cleaned = re.sub(r"(?i)\b(api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*[^\s,;]+",
-                     r"\1=[REDACTED]", cleaned)
+    cleaned = re.sub(
+        r"(?i)\b(api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*[^\s,;]+", r"\1=[REDACTED]", cleaned
+    )
     cleaned = re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._-]{12,}", "Bearer [REDACTED]", cleaned)
     cleaned = re.sub(r"\bsk-[A-Za-z0-9_-]{16,}\b", "[REDACTED_KEY]", cleaned)
     return cleaned[:limit]
@@ -46,7 +47,7 @@ def _unique_text(values: object, limit: int, length: int) -> list[str]:
     if not isinstance(values, (tuple, list)):
         return []
     found: list[str] = []
-    for value in values[:limit * 3]:
+    for value in values[: limit * 3]:
         item = _clean_text(value, length)
         if item and item not in found:
             found.append(item)
@@ -132,22 +133,26 @@ def build_completed_episodes(task_id: str, traces: object, generation: int) -> l
     if not task_id or not isinstance(traces, list):
         return []
     episodes: list[ResearchEpisode] = []
-    for ordinal, item in enumerate(traces[:_MAX_EPISODES_PER_TASK * 4]):
+    for ordinal, item in enumerate(traces[: _MAX_EPISODES_PER_TASK * 4]):
         if not isinstance(item, dict) or item.get("generation") != generation:
             continue
         topic = _clean_text(item.get("topic"), 400)
         if not topic:
             continue
         key = f"{task_id}\x00{generation}\x00{ordinal}\x00{topic}"
-        episodes.append(ResearchEpisode(
-            episode_id="episode-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:28],
-            task_id=task_id, generation=generation, topic=topic,
-            queries=_unique_text(item.get("queries"), _MAX_QUERY_ITEMS, 240),
-            domains=_unique_text(item.get("domains"), _MAX_DOMAINS, 160),
-            search_calls=max(0, min(100, int(item.get("search_calls") or 0))),
-            tool_errors=max(0, min(100, int(item.get("tool_errors") or 0))),
-            findings_emitted=bool(item.get("findings_emitted", False)),
-        ))
+        episodes.append(
+            ResearchEpisode(
+                episode_id="episode-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:28],
+                task_id=task_id,
+                generation=generation,
+                topic=topic,
+                queries=_unique_text(item.get("queries"), _MAX_QUERY_ITEMS, 240),
+                domains=_unique_text(item.get("domains"), _MAX_DOMAINS, 160),
+                search_calls=max(0, min(100, int(item.get("search_calls") or 0))),
+                tool_errors=max(0, min(100, int(item.get("tool_errors") or 0))),
+                findings_emitted=bool(item.get("findings_emitted", False)),
+            )
+        )
         if len(episodes) >= _MAX_EPISODES_PER_TASK:
             break
     return episodes
@@ -190,7 +195,8 @@ class EpisodeMemoryStore:
         if not episodes:
             return 0
         with self._connection() as conn:
-            conn.executemany("""INSERT INTO research_episodes
+            conn.executemany(
+                """INSERT INTO research_episodes
                 (episode_id, task_id, generation, topic, queries, domains,
                  search_calls, tool_errors, findings_emitted, completed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -198,12 +204,23 @@ class EpisodeMemoryStore:
                     queries=excluded.queries, domains=excluded.domains,
                     search_calls=excluded.search_calls, tool_errors=excluded.tool_errors,
                     findings_emitted=excluded.findings_emitted
-            """, [(
-                x.episode_id, x.task_id, x.generation, x.topic,
-                json.dumps(x.queries, ensure_ascii=False),
-                json.dumps(x.domains, ensure_ascii=False),
-                x.search_calls, x.tool_errors, int(x.findings_emitted), x.completed_at,
-            ) for x in episodes])
+            """,
+                [
+                    (
+                        x.episode_id,
+                        x.task_id,
+                        x.generation,
+                        x.topic,
+                        json.dumps(x.queries, ensure_ascii=False),
+                        json.dumps(x.domains, ensure_ascii=False),
+                        x.search_calls,
+                        x.tool_errors,
+                        int(x.findings_emitted),
+                        x.completed_at,
+                    )
+                    for x in episodes
+                ],
+            )
         return len(episodes)
 
     def count(self) -> int:
@@ -226,22 +243,30 @@ class EpisodeMemoryStore:
         results: list[tuple[float, ResearchEpisode]] = []
         for r in rows:
             try:
-                queries = json.loads(r[4]); domains = json.loads(r[5])
+                queries = json.loads(r[4])
+                domains = json.loads(r[5])
                 if not isinstance(queries, list) or not isinstance(domains, list):
                     continue
                 episode = ResearchEpisode(
-                    episode_id=r[0], task_id=r[1], generation=r[2], topic=r[3],
+                    episode_id=r[0],
+                    task_id=r[1],
+                    generation=r[2],
+                    topic=r[3],
                     queries=_unique_text(queries, _MAX_QUERY_ITEMS, 240),
                     domains=_unique_text(domains, _MAX_DOMAINS, 160),
-                    search_calls=r[6], tool_errors=r[7],
-                    findings_emitted=bool(r[8]), completed_at=r[9],
+                    search_calls=r[6],
+                    tool_errors=r[7],
+                    findings_emitted=bool(r[8]),
+                    completed_at=r[9],
                 )
             except (TypeError, ValueError, IndexError):
                 continue
-            similarity = max(lexical_score(query, episode.topic),
-                             0.75 * max((lexical_score(query, q) for q in episode.queries), default=0.0))
+            similarity = max(
+                lexical_score(query, episode.topic),
+                0.75 * max((lexical_score(query, q) for q in episode.queries), default=0.0),
+            )
             if similarity >= min_score:
                 results.append((similarity, episode))
         # Relevance first; no claim of verified quality or 1st-party authority.
         results.sort(key=lambda item: (-item[0], -item[1].completed_at, item[1].episode_id))
-        return [episode for _, episode in results[:min(top_k, 8)]]
+        return [episode for _, episode in results[: min(top_k, 8)]]

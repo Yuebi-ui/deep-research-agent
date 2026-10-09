@@ -62,7 +62,6 @@ def report_metrics(report: str | None) -> dict:
     h3_titles = [title.strip() for level, title in headings if level == "###"]
     citations = _CITATION_RE.findall(report)
     urls = _URL_RE.findall(report)
-    lowered = report.lower()
 
     return {
         "non_empty": bool(report.strip()),

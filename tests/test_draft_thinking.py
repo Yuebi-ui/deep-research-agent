@@ -14,7 +14,6 @@ from __future__ import annotations
 import importlib
 from types import SimpleNamespace
 
-import pytest
 
 import deep_research.llm as llm_mod
 from deep_research.llm import draft_thinking

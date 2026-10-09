@@ -14,7 +14,6 @@ from __future__ import annotations
 import os
 import time
 
-import pytest
 
 from deep_research import llm
 from deep_research.benchmark.fingerprint import thinking_snapshot

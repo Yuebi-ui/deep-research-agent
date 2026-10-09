@@ -29,7 +29,6 @@ from deep_research.memory.schema_guard import (
     EmbeddingSpaceMismatchError,
     LegacyMemoryCollectionError,
     inspect_collection,
-    open_managed_collection,
 )
 from deep_research.memory.schemas import Entity, MemoryClaim
 from deep_research.memory.structured_store import StructuredMemoryStore

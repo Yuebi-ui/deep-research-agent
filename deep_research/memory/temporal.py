@@ -4,6 +4,7 @@ Extraction timestamps are not validity times. Differing numbers are only a
 lead, never proof of a conflict or an overwrite instruction. The SQLite ledger
 is the source of truth for human decisions, independent of Chroma retries.
 """
+
 from __future__ import annotations
 
 import time
@@ -13,12 +14,14 @@ from sqlalchemy import or_, select
 
 from backend.db.engine import session_scope
 from backend.db.models import MemoryTemporalAudit, MemoryTemporalDecision
+from deep_research.memory.retrieval import (
+    _valid_date as _date,
+    interval_relation,
+    valid_interval,
+)
 from deep_research.memory.schemas import Contradiction, MemoryClaim
 
 _ALLOWED = {"confirmed_change", "confirmed_conflict", "dismissed"}
-
-
-from deep_research.memory.retrieval import _valid_date as _date, valid_interval, interval_relation
 
 
 @dataclass(frozen=True)

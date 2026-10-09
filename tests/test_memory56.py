@@ -12,7 +12,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from deep_research.memory.episodes import (
-    EpisodeMemoryStore, build_completed_episodes, extract_research_trace,
+    EpisodeMemoryStore, build_completed_episodes,
 )
 from deep_research.memory.stage_retrieval import retrieve_stage_context
 

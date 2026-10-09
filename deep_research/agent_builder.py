@@ -20,7 +20,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from deep_research.utils import get_today_str
 from deep_research.states import AgentState, AgentInputState
-from deep_research.prompts import FINAL_REPORT_PROMPT, RESEARCH_BRIEF_PROMPT
+from deep_research.prompts import RESEARCH_BRIEF_PROMPT
 from deep_research.research_seed import (
     ResearchFenceError,
     active_generation,
