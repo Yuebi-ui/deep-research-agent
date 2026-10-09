@@ -1,5 +1,8 @@
 # Phase G 运行时设计（Design Gate 交付物）
 
+> **历史设计说明：** 本文记录早期 Phase G 的运行时设计，部分前端路径来自当时的仓库结构。当前仓库为 API-first，现行拓扑以 `architecture/README.md`、`docker-compose.yml` 和 `docs/PROJECT_STATUS.md` 为准。
+
+
 > 对应 `PHASE_G_WORKER_RUNTIME_EXECUTION_PLAN.md` §5 / §35。
 >
 > **本文档是实施前的硬闸门。** §36 的实施（G1–G9）必须在本文档逐项通过

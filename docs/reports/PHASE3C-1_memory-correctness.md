@@ -36,7 +36,7 @@
 
 ## 4. Chosen unified architecture（模式 A + identity marker）
 
-- 统一到 DashScope `text-embedding-v4`（1024 维，与 PROJECT_FACTS 既有声明一致）；离线用确定性 fake（provider=fake，与 live 空间互不兼容）。
+- 统一到 DashScope `text-embedding-v4`（1024 维，与当时的项目配置记录一致）；离线用确定性 fake（provider=fake，与 live 空间互不兼容）。
 - `deep_research/memory/embeddings.py`：**唯一** embedding 入口 `EmbeddingClient` + 不可变 `EmbeddingIdentity`；实测 text-embedding-v4 单请求 ≤10 条 → client 内自动分批（`MAX_BATCH_SIZE=10`）。
 - `deep_research/memory/schema_guard.py`：collection metadata 写 identity marker，打开时校验；legacy（无 marker）或 mismatch → **显式抛错**；`ManagedCollection` 是唯一写/查入口（永远显式传 embeddings）。
 - 四个 structured collection 统一 cosine 空间；`manager` 两个 store 共用单一 `EmbeddingClient`；`/api/health` 暴露 `memory_schema` 状态。
@@ -50,7 +50,7 @@
 ## 6. Files changed（20 files，+3019 / -261）
 
 新增：`memory/embeddings.py`、`memory/schema_guard.py`、`memory/migration.py`、`scripts/migrate_memory_schema.py`、`deep_research/benchmark/{__init__,fingerprint,preflight}.py`、4 个测试文件。
-修改：`memory/{vector_store,structured_store,manager}.py`、`backend/main.py`（health）、`scripts/run_baseline.py`、`docs/{BASELINE_RUNBOOK,PROJECT_FACTS}.md`、`.gitignore`。
+修改：`memory/{vector_store,structured_store,manager}.py`、`backend/main.py`（health）、`scripts/run_baseline.py`、`docs/BASELINE_RUNBOOK.md` 等项目记录、`.gitignore`。
 
 ## 7. Tests added（40）
 

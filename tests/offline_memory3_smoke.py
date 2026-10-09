@@ -14,7 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import offline_phase123_smoke as stub  # noqa: E402  (register isolated fakes)
+import offline_phase123_smoke as stub  # noqa: E402  # register isolated fakes
 
 from deep_research.context_budget import fit_prompt, BudgetLimits, _TRIM_MARKER
 from deep_research.memory.sections import split_report_sections
@@ -186,7 +186,8 @@ def run():
     def budget_order():
         class Counter:
             name = "char"
-            def count(self, t): return len(t)
+            def count(self, t):
+                return len(t)
         c = Counter()
         blocks = [f"quiet{i:02d}___" for i in range(59)] + ["HOTPICK___"]
         text = "\n\n".join(blocks)

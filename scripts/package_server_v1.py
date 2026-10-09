@@ -43,10 +43,11 @@ INCLUDE_DIRS: tuple[str, ...] = (
     "deep_research",
     "backend",
     "migrations",
-    "frontend",
     "scripts",
     "tests",
     "docs",
+    "architecture",
+    "examples",
     ".github",
 )
 
@@ -55,19 +56,21 @@ INCLUDE_FILES: tuple[str, ...] = (
     "alembic.ini",
     "pytest.ini",
     "ruff.toml",
+    "pyproject.toml",
     "requirements.txt",
     "requirements-dev.txt",
-    "openapi.json",
-    "config.server.example.yml",   # 服务器配置模板（无密钥）
-    ".env.server.example",         # 服务器环境变量模板
-    "docker-compose.yml",          # 按计划 §27 保留 Docker 支持
+    "config.server.example.yml",
+    "config.docker.example.yml",
+    "config.hybrid.example.yml",
+    ".env.example",
+    "docker-compose.yml",
     "Dockerfile",
     ".dockerignore",
     ".gitignore",
+    ".gitattributes",
     "README.md",
-    "STARTUP.md",
-    "CLAUDE.md",
-    "AUTODL_SERVER_V1_DEPLOYMENT_GUIDE.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
 )
 
 #: 即使在白名单目录内也要排除的路径片段（大小写不敏感）
@@ -80,11 +83,10 @@ EXCLUDE_PATTERNS: tuple[str, ...] = (
     "data", "logs", "results", "*.db", "*.sqlite", "*.sqlite3",
     # 秘密
     "config.yml", ".env", ".env.local", ".env.test",
-    # 前端本地覆盖
+    # 本地 UI 覆盖（如果未来挂载独立 UI 客户端）
     ".env.development.local", ".env.production.local",
-    # 内部资料 / 产物
+    # 本地归档 / 日志
     "*.zip", "*.tar.gz", "*.log",
-    "面试问答文档.md", "大模型应用开发岗_Linux学习清单.md",
 )
 
 # ===== secret 扫描 =====

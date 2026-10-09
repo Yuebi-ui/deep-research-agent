@@ -72,7 +72,7 @@ def probe_local_model(base_url: str, api_key: str = "", timeout: float = 2.0) ->
         req = urllib.request.Request(url)
         if api_key:
             req.add_header("Authorization", f"Bearer {api_key}")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310（本机服务）
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310  # 本机服务
             payload = json.loads(resp.read().decode("utf-8"))
         for item in payload.get("data") or []:
             max_len = None

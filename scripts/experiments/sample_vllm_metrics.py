@@ -34,7 +34,7 @@ _SERIES = [
 
 def _fetch(url: str) -> str:
     req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310（本机服务）
+    with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310  # 本机服务
         return resp.read().decode("utf-8", errors="replace")
 
 
@@ -67,7 +67,7 @@ def main() -> int:
                 row = {"ts": time.time(), **values}
                 f.write(json.dumps(row) + "\n")
                 f.flush()
-            except Exception as exc:  # noqa: BLE001 —— 采样失败只跳过本轮
+            except Exception as exc:  # noqa: BLE001  # 采样失败只跳过本轮
                 f.write(json.dumps({"ts": time.time(), "error": str(exc)[:120]}) + "\n")
                 f.flush()
             time.sleep(args.interval)

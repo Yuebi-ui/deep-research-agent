@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         report = run_migration(str(persist_dir), embedder, apply=args.apply)
-    except Exception as exc:  # noqa: BLE001 —— 迁移失败必须显式可见
+    except Exception as exc:  # noqa: BLE001  # 迁移失败必须显式可见
         print(f"[FAIL] 迁移失败：{type(exc).__name__}: {exc}", file=sys.stderr)
         return 4
 

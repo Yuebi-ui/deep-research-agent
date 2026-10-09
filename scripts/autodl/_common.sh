@@ -45,7 +45,7 @@ load_env() {
     # shellcheck disable=SC1090
     set -a; . "$ENV_FILE"; set +a
   else
-    warn "未找到 ${ENV_FILE}（可先 cp .env.server.example .env.server）"
+    warn "未找到 ${ENV_FILE}（可先 cp .env.example .env.server）"
   fi
 
   # 默认值（可被 .env.server 覆盖）
@@ -54,7 +54,6 @@ load_env() {
   export CONFIG_PATH="${CONFIG_PATH:-config.yml}"
   export CHECKPOINTER_BACKEND="${CHECKPOINTER_BACKEND:-redis}"
   export API_PORT="${API_PORT:-8000}"
-  export FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
   # 相对路径按项目根解析（应用侧也是这么做的）
   case "$CONFIG_PATH" in

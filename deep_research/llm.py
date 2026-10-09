@@ -440,6 +440,6 @@ def with_role_metadata(runnable, role: str, *, stage: str | None = None):
         handle = role_cfg.get("handle")
         if backend and handle:
             return runnable.with_config({"metadata": _role_metadata(role, backend, handle)})
-    except Exception as exc:  # noqa: BLE001 —— 观测归因失败不影响主流程
+    except Exception as exc:  # noqa: BLE001  # 观测归因失败不影响主流程
         logger.debug("role metadata 附加失败（忽略）: %s", exc)
     return runnable

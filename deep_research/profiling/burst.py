@@ -87,7 +87,7 @@ async def run_burst(
             started = now()
             try:
                 outcome = await to_thread(send_fn, spec)
-            except Exception as exc:  # noqa: BLE001 —— 单请求失败不得中断 burst
+            except Exception as exc:  # noqa: BLE001  # 单请求失败不得中断 burst
                 outcome = {"ok": False, "status": None, "content": None, "usage": None,
                            "error": f"{type(exc).__name__}: {exc}"}
             finished = now()

@@ -326,7 +326,7 @@ def test_embedding_client_chunks_live_batches(monkeypatch):
     sent_batches: list[list[str]] = []
 
     class _FakeEmbeddings:
-        def create(self, model, input):  # noqa: A002 - 对齐 OpenAI SDK 签名
+        def create(self, model, input):  # noqa: A002  # 对齐 OpenAI SDK 签名
             sent_batches.append(list(input))
             payload = [
                 type("D", (), {"embedding": fake_embedding(t, dims=8)})()

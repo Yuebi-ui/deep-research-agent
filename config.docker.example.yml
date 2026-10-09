@@ -1,7 +1,8 @@
-# Server V1 配置模板（**不含任何密钥**）
+# Docker Compose Fake 模式配置模板（**不含任何密钥**）
 #
 # 用法：
-#     cp config.server.example.yml config.yml
+#     docker compose up --build
+# Docker Compose 默认将此文件只读挂载为 /app/config.yml。
 #
 # 为什么这份模板这么短？
 # ----------------------
@@ -16,7 +17,7 @@
 #   * 搜索 provider 同理，不需要 `search`；
 #   * embedding 走确定性伪向量，不需要凭据。
 #
-# 本模板用于本机/AutoDL 的 Fake 模式配置。数据库版本由当前 migrations/
+# 本模板用于容器间通信的 Fake 模式配置。数据库版本由当前 migrations/
 # 和 `alembic upgrade head` 决定，不要依赖历史测试的版本号。
 # 需要真实模型时，请配置 `cognition` / `search` / `roles` 和相应的密钥，
 # 并设置合适的 APP_ENV、Provider 与外部调用开关。
@@ -39,7 +40,7 @@ stages:
     #   * checkpointer 不可达 → Worker 启动时直接退出
     redis:
       enabled: true
-      url: redis://127.0.0.1:6379
+      url: redis://redis:6379
       db: 0
       # 审查决定的有效期（秒）。注意审查决定本身是落 SQLite 的，
       # 这个值只影响旧版缓存路径。

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# 查看日志。
+# 查看服务日志。
 #
-#     bash scripts/autodl/logs.sh api      # 最近 100 行
-#     bash scripts/autodl/logs.sh worker -f # 实时跟踪
+#     bash scripts/autodl/logs.sh api
+#     bash scripts/autodl/logs.sh worker -f
 #     bash scripts/autodl/logs.sh all
 
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../.."
@@ -27,7 +27,7 @@ show() {
 }
 
 case "$TARGET" in
-  all) for n in redis api worker frontend; do show "$n"; done ;;
-  redis|api|worker|frontend) show "$TARGET" ;;
-  *) die "用法: logs.sh [all|api|worker|redis|frontend] [-f] [LINES=200]" ;;
+  all) for n in redis api worker; do show "$n"; done ;;
+  redis|api|worker) show "$TARGET" ;;
+  *) die "用法: logs.sh [all|api|worker|redis] [-f] [LINES=200]" ;;
 esac

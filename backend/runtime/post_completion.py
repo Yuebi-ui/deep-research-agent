@@ -58,7 +58,7 @@ class PostCompletionTasks:
                 return result
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:  # noqa: BLE001 —— 后台任务失败必须就地隔离
+            except Exception as exc:  # noqa: BLE001  # 后台任务失败必须就地隔离
                 error = exc
                 logger.warning("post-completion 任务 %s 失败（已隔离）: %s", name, exc, exc_info=True)
                 return None

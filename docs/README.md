@@ -1,25 +1,24 @@
-# Documentation index
+# 文档索引
 
-## Start here
+## 架构与核心设计
 
-- [System architecture](../architecture/README.md)
-- [Memory architecture](../architecture/MEMORY.md)
-- [Code map](../architecture/CODE_MAP.md)
-- [Project status](PROJECT_STATUS.md)
-- [Design decisions](DESIGN_DECISIONS.md)
-- [Testing strategy](TESTING.md)
+- [系统架构](../architecture/README.md)
+- [Memory 架构](../architecture/MEMORY.md)
+- [代码地图](../architecture/CODE_MAP.md)
+- [项目状态](PROJECT_STATUS.md)
+- [设计决策](DESIGN_DECISIONS.md)
+- [测试策略](TESTING.md)
 - [Roadmap](ROADMAP.md)
-- [GitHub publish checklist](GITHUB_PUBLISH_CHECKLIST.md)
-- [Demo flow](../examples/demo_run.md)
+- [Demo 流程](../examples/demo_run.md)
 
-## Runtime / evidence
+## 运行与验证
 
-- [Hybrid E2E evidence](E2E_EVIDENCE.md)
-- [Server readiness notes](server-v1-readiness.md)
+- [Hybrid E2E 记录](E2E_EVIDENCE.md)
+- [Server Runtime readiness](server-v1-readiness.md)
 - [Runtime design notes](phase-g-runtime-design.md)
 - [Baseline runbook](BASELINE_RUNBOOK.md)
+- [AutoDL deployment notes](deployment-autodl-notes.md)
 
-## Engineering experiments
+## 工程实验记录
 
-The files under `docs/reports/` are retained as engineering evidence for earlier
-performance/reliability phases. They are not the primary architecture docs.
+`docs/reports/` 保存了早期性能、可靠性与模型路由实验。它们属于工程历史记录，不作为当前架构的唯一事实来源；当前实现应以 `architecture/`、`PROJECT_STATUS.md` 和代码为准。

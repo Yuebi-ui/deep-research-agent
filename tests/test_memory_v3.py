@@ -92,7 +92,8 @@ def test_temporal_relation_does_not_auto_refute_old_claim(tmp_path):
 def test_context_budget_keeps_late_high_relevance_on_second_pass():
     class Counter:
         name = "character-counter"
-        def count(self, text: str) -> int: return len(text)
+        def count(self, text: str) -> int:
+            return len(text)
     chunks = [f"unrelated{i:02d}" for i in range(59)] + ["KEYPASSAGE0"]
     content = "\n\n".join(chunks)
     budget = len(_TRIM_MARKER.format(kept=0, total=len(chunks))) + sum(map(len, chunks))

@@ -99,7 +99,7 @@ def get_token_counter(model_root: str | None = None) -> TokenCounter:
             counter = _TokenizerCounter(path)
             _counter_cache[path] = counter
             return counter
-        except Exception as exc:  # noqa: BLE001 —— 计数失败不影响总结本身
+        except Exception as exc:  # noqa: BLE001  # 计数失败不影响总结本身
             logger.warning("tokenizer 加载失败，退化为启发式计数: %s", exc)
     return _HeuristicCounter()
 
@@ -314,7 +314,7 @@ def fit_prompt(
             build_prompt=build_prompt, content=content or "", query=query or "",
             limits=limits, counter=counter,
         )
-    except Exception as exc:  # noqa: BLE001 —— 预算失败不得阻断总结
+    except Exception as exc:  # noqa: BLE001  # 预算失败不得阻断总结
         logger.warning("context budget 计算失败，跳过裁剪: %s", exc)
         return build_prompt(content or ""), BudgetDecision(applied=False, reason="budget_error")
 

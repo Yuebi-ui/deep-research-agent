@@ -641,7 +641,7 @@ class TaskRunner:
         error: str | None = None
         try:
             doc_id = await asyncio.to_thread(store_report_memory, user_query, report)
-        except Exception as exc:  # noqa: BLE001 —— 记忆是派生数据，失败不得冒泡
+        except Exception as exc:  # noqa: BLE001  # 记忆是派生数据，失败不得冒泡
             error = f"{type(exc).__name__}: {exc}"[:300]
             logger.warning("记忆落库失败（已降级，不影响任务状态）: %s", exc)
         episode_count = 0

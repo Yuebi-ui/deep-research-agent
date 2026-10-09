@@ -71,7 +71,7 @@ else:
             super().__init__()
             self.level = level
 
-        def filter(self, record: _logging.LogRecord) -> bool:  # noqa: A003  (filter name)
+        def filter(self, record: _logging.LogRecord) -> bool:  # noqa: A003  # filter name
             return record.levelno <= self.level
 
 

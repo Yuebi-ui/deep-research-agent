@@ -49,7 +49,6 @@ SSE                   只观察
 | API | `uvicorn backend.main:app --host 0.0.0.0 --port 8000` | ≥1 |
 | **Worker** | `python -m backend.worker` | ≥1（可水平扩展） |
 | Redis Stack | `redis/redis-stack-server:latest` | 1 |
-| Frontend | `npm run start`（Next.js） | ≥1 |
 
 **Worker 可以独立于 API 扩缩容**，这是 Phase G 的核心收益。
 
@@ -59,7 +58,6 @@ SSE                   只观察
 
 ```text
 8000    API
-3000    Frontend
 6379    Redis Stack
 ```
 
@@ -88,12 +86,6 @@ WORKER_MAX_ATTEMPTS          默认 3
 WORKER_BACKOFF_BASE_SECONDS  默认 1
 EVENT_RETENTION_MAXLEN       默认 1000（每任务事件保留条数）
 JOB_DEDUPE_TTL_SECONDS       默认 5
-```
-
-### 前端
-
-```text
-NEXT_PUBLIC_API_BASE   http://backend:8000/api
 ```
 
 ---
@@ -152,8 +144,6 @@ alembic upgrade head
 3. Worker（可先于 API 启动 —— 它会等待 job）
       ↓
 4. API
-      ↓
-5. Frontend
 ```
 
 Worker 先启动是安全的：队列为空时它只是阻塞等待。
@@ -163,10 +153,9 @@ Worker 先启动是安全的：队列为空时它只是阻塞等待。
 ## 9. Shutdown Order
 
 ```text
-1. Frontend
-2. API          （无状态，随时可停）
-3. Worker       ← 发 SIGTERM，等待其优雅退出
-4. Redis Stack
+1. API          （无状态，随时可停）
+2. Worker       ← 发 SIGTERM，等待其优雅退出
+3. Redis Stack
 ```
 
 ### Worker 的优雅退出语义（重要）
@@ -238,7 +227,6 @@ CPU/内存都属轻量级（Fake provider 或云端 API 场景下）：
 API       ~200–400 MB
 Worker    ~300–600 MB（LangGraph + ChromaDB 常驻）
 Redis     取决于事件保留量，通常 < 200 MB
-Frontend  ~150–300 MB
 ```
 
 无 GPU 需求——GPU 只属于独立的 Model Service（见下）。

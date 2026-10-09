@@ -292,7 +292,7 @@ def _record_search_metric(
             content_sha1s=content_sha1s,
             error_message=(error_message or "")[:500] or None,
         )
-    except Exception as exc:  # noqa: BLE001 —— 观测绝不影响搜索/任务
+    except Exception as exc:  # noqa: BLE001  # 观测绝不影响搜索/任务
         logger.debug("search metric 记录失败（已忽略）: %s", exc)
 
 
@@ -323,7 +323,7 @@ def summarize_webpage_content(webpage_content: str, query: str = "") -> str:
                 content=webpage_content,
                 query=query,
             )
-        except Exception as exc:  # noqa: BLE001 —— 预算失败不得阻断总结
+        except Exception as exc:  # noqa: BLE001  # 预算失败不得阻断总结
             logger.warning("context budget 应用失败（按原样发送）: %s", exc)
             prompt_text = SUMMARIZE_PROMPT.format(
                 webpage_content=webpage_content, date=get_today_str()

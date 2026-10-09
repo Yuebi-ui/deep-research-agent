@@ -18,7 +18,6 @@
 api        FastAPI（命令 / 查询 / 事件投影）
 worker     python -m backend.worker（唯一 LangGraph 执行者）
 redis      redis-stack-server
-frontend   Next.js
 model      本机推理服务（OpenAI-compatible HTTP）—— **新增**
 ```
 
@@ -87,7 +86,6 @@ worker 启动时会**直接拒绝** memory 后端。
 3. Model Service（确认 /v1/models 可达）
 4. Worker
 5. API
-6. Frontend
 ```
 
 Model Service 先于 Worker 启动，避免首次推理请求失败。

@@ -14,7 +14,7 @@ import os
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-from deep_research.memory.embeddings import (  # noqa: F401  (re-export 兼容旧导入)
+from deep_research.memory.embeddings import (  # noqa: F401  # re-export 兼容旧导入
     EmbeddingClient,
     fake_embedding,
     _EMBEDDING_DIMS,

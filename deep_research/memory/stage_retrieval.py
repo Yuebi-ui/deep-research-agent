@@ -64,7 +64,7 @@ def retrieve_stage_context(query: str, stage: str, *, manager=None, episodes=Non
         document_hints = manager.retrieve_context(query, top_k=2)
         if document_hints:
             parts.append(document_hints)
-    except Exception as exc:  # noqa: BLE001 - no memory failure may stop research
+    except Exception as exc:  # noqa: BLE001  # no memory failure may stop research
         logger.warning("stage %s document recall unavailable: %s", stage, exc)
 
     if episodic_enabled():

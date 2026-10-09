@@ -43,7 +43,7 @@ def api(tmp_path, monkeypatch):
     这里替换的是它依赖的底层：Redis 客户端与 `queue.enqueue`。
     """
     import backend.main as main_module
-    from backend.routes import research as route  # noqa: F401  (确保模块已加载)
+    from backend.routes import research as route  # noqa: F401  # 确保模块已加载
     from backend.runtime import queue as job_queue
     from backend.runtime import redis as rt_redis
 

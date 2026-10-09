@@ -195,5 +195,5 @@ class Heartbeat:
         if self._on_lost is not None:
             try:
                 await self._on_lost()
-            except Exception as exc:  # noqa: BLE001 —— 旁路回调不得影响判定
+            except Exception as exc:  # noqa: BLE001  # 旁路回调不得影响判定
                 logger.debug("on_lost 回调异常（已忽略）: %s", exc)

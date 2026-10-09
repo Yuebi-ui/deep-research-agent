@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the GitHub-facing repository contract without third-party packages."""
+"""Validate the repository contract without third-party packages."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ REQUIRED = [
     "README.md",
     ".gitignore",
     ".env.example",
+    "config.docker.example.yml",
     "pyproject.toml",
     "architecture/README.md",
     "architecture/MEMORY.md",
@@ -76,7 +77,7 @@ def check() -> list[str]:
 
     for pattern in FORBIDDEN_ROOT_GLOBS:
         for path in ROOT.glob(pattern):
-            problems.append(f"internal release artifact should not be in the public root: {path.name}")
+            problems.append(f"internal release artifact should not be in the repository root: {path.name}")
 
     for pattern in ("memory3-offline-*", "offline-memory-*"):
         for path in ROOT.glob(pattern):

@@ -257,7 +257,7 @@ class BaselineMetricsCollector(BaseCallbackHandler):
             with self._lock:
                 with open(self._dir / _METRIC_FILES[kind], "a", encoding="utf-8") as f:
                     f.write(line + "\n")
-        except Exception as exc:  # noqa: BLE001 —— 观测失败绝不影响业务
+        except Exception as exc:  # noqa: BLE001  # 观测失败绝不影响业务
             logger.debug("baseline metric 写入失败（已忽略）: %s", exc)
 
     def write_meta(self, data: dict[str, Any]) -> None:

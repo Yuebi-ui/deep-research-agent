@@ -1,11 +1,7 @@
-# GitHub/portfolio runtime topology. The repository is API-first; no frontend
-# source tree is bundled in this snapshot.
-#
-# Prerequisite:
-#   cp config.server.example.yml config.yml
-#
-# For real providers, use config.hybrid.example.yml as a template and keep keys
-# out of the repository.
+# API-first runtime. Default Docker config uses service hostname `redis` and
+# fake providers. Host/AutoDL config templates deliberately keep 127.0.0.1.
+# Override DR_COMPOSE_CONFIG_FILE to mount a private YAML config when needed;
+# pass external-provider secrets separately (do not commit them).
 
 services:
   redis:
@@ -30,13 +26,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ${DR_COMPOSE_CONFIG_FILE:-./config.docker.example.yml}:/app/config.yml:ro
       - ./data:/app/data
     environment:
       APP_ENV: ${APP_ENV:-development}
       STAGE: ${STAGE:-prod}
       CONFIG_PATH: /app/config.yml
       CHECKPOINTER_BACKEND: redis
+      ALLOW_LIVE_EXTERNAL_APIS: ${ALLOW_LIVE_EXTERNAL_APIS:-false}
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-fake}
     depends_on:
       redis:
         condition: service_healthy
@@ -51,13 +50,16 @@ services:
     build: .
     command: ["python", "-m", "backend.worker"]
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ${DR_COMPOSE_CONFIG_FILE:-./config.docker.example.yml}:/app/config.yml:ro
       - ./data:/app/data
     environment:
       APP_ENV: ${APP_ENV:-development}
       STAGE: ${STAGE:-prod}
       CONFIG_PATH: /app/config.yml
       CHECKPOINTER_BACKEND: redis
+      ALLOW_LIVE_EXTERNAL_APIS: ${ALLOW_LIVE_EXTERNAL_APIS:-false}
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-fake}
       # Dedicated memory-worker owns the outbox in this Compose topology.
       DR_MEMORY_OUTBOX_POLL_ON_WORKER: "off"
     depends_on:
@@ -69,13 +71,16 @@ services:
     build: .
     command: ["python", "-m", "backend.memory_worker"]
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ${DR_COMPOSE_CONFIG_FILE:-./config.docker.example.yml}:/app/config.yml:ro
       - ./data:/app/data
     environment:
       APP_ENV: ${APP_ENV:-development}
       STAGE: ${STAGE:-prod}
       CONFIG_PATH: /app/config.yml
       DR_MEMORY_OUTBOX_ENABLED: "on"
+      ALLOW_LIVE_EXTERNAL_APIS: ${ALLOW_LIVE_EXTERNAL_APIS:-false}
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-fake}
     depends_on:
       backend:
         condition: service_healthy
