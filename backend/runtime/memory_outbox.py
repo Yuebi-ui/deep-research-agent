@@ -24,12 +24,15 @@ from sqlalchemy.orm import aliased
 from backend.db.engine import session_scope
 from backend.db.models import MemoryOutbox, ResearchTask
 from deep_research import logging as dr_logging
+from deep_research.memory.flags import memory_write_enabled
 
 logger = dr_logging.get_logger(__name__)
 
 
 def enabled() -> bool:
-    return os.getenv("DR_MEMORY_OUTBOX_ENABLED", "on").strip().lower() not in ("0", "off", "false", "no")
+    # Disabling the outbox alone selects the legacy fallback; a true no-write
+    # ablation must disable memory writes independently of the outbox mode.
+    return memory_write_enabled() and os.getenv("DR_MEMORY_OUTBOX_ENABLED", "on").strip().lower() not in ("0", "off", "false", "no")
 
 
 class LeaseLost(RuntimeError):
@@ -197,6 +200,8 @@ class MemoryOutboxProcessor:
 
     @staticmethod
     def _write_report(query: str, report: str) -> str | None:
+        if not memory_write_enabled():
+            return None
         # Import only inside a processing thread; no model initialized on API startup.
         from deep_research.memory.runtime import get_memory_manager
         manager = get_memory_manager()
@@ -208,7 +213,8 @@ class MemoryOutboxProcessor:
 
     @staticmethod
     def _write_episodes(payload: list[dict]) -> int:
-        if not payload:
+        from deep_research.memory.stage_retrieval import episodic_enabled
+        if not memory_write_enabled() or not episodic_enabled() or not payload:
             return 0
         from deep_research.memory.episodes import ResearchEpisode
         from deep_research.memory.runtime import get_episode_store

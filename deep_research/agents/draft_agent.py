@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: draft_agent.py
-#   Description: 根据用户需求生成报告草稿  
+#   Description: 根据用户需求生成报告草稿
 #***********************************************
 
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # 构建Graph
     deep_researcher_builder = StateGraph(AgentState, input_schema=AgentInputState)
 
-    # 增加节点 
+    # 增加节点
     deep_researcher_builder.add_node("write_research_brief", write_research_brief)
     deep_researcher_builder.add_node("write_draft_report", write_draft_report)
 
@@ -130,4 +130,3 @@ if __name__ == "__main__":
 
     print("=====  Draft Report ====")
     console.print(Markdown(result["draft_report"]))
-

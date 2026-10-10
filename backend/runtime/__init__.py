@@ -1,6 +1,6 @@
 """Worker Runtime 原语。
 
-职责划分（见 docs/phase-g-runtime-design.md）：
+职责划分如下：
 
 ```text
 redis.py      连接与配置解析

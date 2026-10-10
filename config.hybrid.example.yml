@@ -59,7 +59,7 @@ stages:
         api_key: ""              # ← 部署时填入真实 key；不要提交
         # 可选：temperature / models.<handle>.max_tokens 按生产实际值补充
 
-      # 本地：vLLM OpenAI-compatible（scripts/model-service/ 管理，端口 8001）。
+      # 同一 AutoDL 服务器上：vLLM OpenAI-compatible（scripts/model-service/ 管理，端口 8001）。
       # api_key 为 vLLM 约定的非敏感占位符，禁止复用任何真实云端 key。
       openai_local:
         base_url: http://127.0.0.1:8001/v1

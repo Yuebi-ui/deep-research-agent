@@ -1,0 +1,24 @@
+{
+  "chroma": {
+    "annotated_queries_reported": 120,
+    "baseline": {
+      "ndcg_at_10": 0.803,
+      "recall_at_5": 0.842,
+      "retriever": "Dense-only"
+    },
+    "delta_from_displayed_rounded_endpoints_pp": 4.1,
+    "optimized": {
+      "ndcg_at_10": 0.831,
+      "recall_at_5": 0.883,
+      "retriever": "Hybrid"
+    },
+    "query_level_observations_available": false,
+    "reported_ndcg_at_10_delta": 0.028,
+    "reported_recall_at_5_delta_pp": 4.2,
+    "rounding_note": "README lists +4.2pp, whereas its one-decimal displayed endpoints subtract to +4.1pp. An unrounded delta can differ after independent rounding; unrounded figures are unavailable."
+  },
+  "data_note": "Real Chroma measurements as reported by project owner. Raw labels, query-level results and config fingerprints absent; not the offline lexical fixture.",
+  "data_origin": "historical_real_metrics_reported_in_root_readme",
+  "result_kind": "README_REPORTED_REAL_RUNTIME",
+  "source_document": "README.md / 实测结果与消融分析"
+}

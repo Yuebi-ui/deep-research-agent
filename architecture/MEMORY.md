@@ -124,6 +124,5 @@ claim IDs provide idempotency.
 | Supervisor/Researcher on-demand recall | Implemented |
 | Episodic research memory | Implemented |
 | Durable outbox + consolidator | Implemented foundation |
-| Advanced knowledge graph / A-MEM | Not implemented; experiment roadmap |
 
-See [Roadmap](../docs/ROADMAP.md) for the remaining hardening work.
+The table above summarizes the features present in this codebase; no separate roadmap is shipped in this repository.

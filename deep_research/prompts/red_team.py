@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: red_team.py
-#   Description: Red-Team提示词 
+#   Description: Red-Team提示词
 #***********************************************
 
 RED_TEAM_PROMPT = """您是“RED TEAM”对抗者。

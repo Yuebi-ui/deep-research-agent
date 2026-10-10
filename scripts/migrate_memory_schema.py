@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     from deep_research.settings import get_engine_settings
 
     persist_dir = Path(args.persist_dir) if args.persist_dir else (
-        get_engine_settings().resolved_data_dir / "chroma"
+        get_engine_settings().resolved_memory_data_dir / "chroma"
     )
 
     embedder = EmbeddingClient()

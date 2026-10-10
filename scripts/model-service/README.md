@@ -1,13 +1,13 @@
-# Local Model Service（本地 vLLM）
+# AutoDL 服务器 GPU vLLM（Local Model Service）
 
-独立于应用（FastAPI / Worker / LangGraph）的本地推理服务，对 Worker
+独立于应用（FastAPI / Worker / LangGraph）的服务器端 GPU 推理服务，对 Worker
 暴露 **OpenAI-compatible HTTP** 接口：
 
 ```text
 Worker / LangGraph
       │  OpenAI-compatible HTTP（http://127.0.0.1:8001/v1）
       ▼
-Local Model Service（本目录脚本管理）
+AutoDL Server vLLM（本目录脚本管理）
       │  vLLM
       ▼
 Qwen/Qwen3-30B-A3B-GPTQ-Int4（本地权重）
@@ -74,7 +74,6 @@ Local Service 出问题时，把 `config.yml` 中 4 个 LOCAL 角色改回
 ## PENDING_GPU（必须等 GPU 才能确认的事项）
 
 - vLLM 0.19.1 / torch 2.10.0(cu128) 与驱动 570.124.04 的**运行时**兼容性
-  （安装元数据已核对，运行时加载未验证）。
 - `--tool-call-parser hermes` 是否适配 Qwen3-30B-A3B 的工具调用输出
   （`research_agent` / `supervisor` 使用 `bind_tools`）。
 - `chat_template_kwargs.enable_thinking=false` 是否被该 vLLM 版本接受

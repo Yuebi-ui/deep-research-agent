@@ -25,4 +25,4 @@ if [ "$STOP_REDIS" -eq 1 ]; then
 fi
 
 section "完成"
-info "Redis 数据保留在 data/redis/，任务数据保留在 data/tasks.db"
+info "Redis 数据保留在 data/redis/，任务数据保留在 config.yml 指定的 SQLite 路径"

@@ -1,12 +1,11 @@
 # Deep Research Agent
 
+
 一个基于 **LangGraph + FastAPI + Redis + SQLite + Chroma** 构建的可恢复多 Agent 深度研究系统。
 项目重点解决两类在长链路研究任务中比较棘手的问题：
 
 1. **研究任务如何可靠执行、暂停、恢复和重试**；
 2. **历史研究结果如何形成可检索、可追溯、可更新的长期记忆**。
-
-仓库包含研究运行时、Memory 3.0 核心实现、数据库迁移、自动化测试与架构文档。各模块的实现范围和验证证据记录在 [项目状态](docs/PROJECT_STATUS.md)；尚未完成的生产环境验证和多租户能力则单独列入 [Roadmap](docs/ROADMAP.md)。
 
 ## 核心能力
 
@@ -84,7 +83,6 @@ flowchart LR
 | Temporal Memory | 记录潜在事实变化，并通过审核账本形成可追踪决定 | `temporal.py` |
 | Durable Consolidation | 以 Outbox 方式异步、可重试地整理报告和经验记忆 | `backend/runtime/memory_outbox.py`, `backend/memory_worker.py` |
 
-当前实现刻意不把“数字不同”直接解释为旧事实失效，也没有把高级知识图谱推理包装成已完成能力。相关扩展放在 [Roadmap](docs/ROADMAP.md) 中。
 
 ## 项目目录
 
@@ -99,11 +97,13 @@ flowchart LR
 │   ├── memory/                 # Memory 3.0
 │   ├── verification/           # Claim extraction + verification
 │   └── prompts/                # Prompt contracts
+├── benchmarks/                 # 评测集、消融、运行与指标汇总
+├── results/                    # 离线实测与合成示例分离
 ├── architecture/               # 系统与 Memory 架构说明
-├── docs/                       # 设计决策、状态、测试与历史实验记录
+├── docs/                       # 当前保留的文档索引、设计决策与测试说明
 ├── examples/                   # API 示例与流程说明
 ├── migrations/                 # Alembic migrations
-├── scripts/                    # 运维、迁移、回填和实验脚本
+├── scripts/                    # AutoDL、服务器 vLLM、迁移、回填及实验脚本
 └── tests/                      # 单元测试、离线集成测试与 smoke tests
 ```
 
@@ -215,18 +215,45 @@ $env:DR_MEMORY_OUTBOX_POLL_ON_WORKER = "off"
 python -m backend.memory_worker
 ```
 
-正式命令/事件运行时仍依赖 Redis Stack。默认 `docker-compose.yml` 只声明仓库中真实存在的服务：`backend`、`worker`、`memory-worker` 和 `redis`。
+正式命令/事件运行时依赖 Redis Stack（含 RediSearch / RedisJSON）及持久化 checkpoint。本仓库的 AutoDL 部署入口是 **宿主环境中的独立 Python 进程**，不要求 Docker Compose。
 
-## Docker Compose
+## AutoDL 服务器部署（vLLM 与 Agent 在同一台服务器）
 
-Docker 环境默认使用 [容器配置模板](config.docker.example.yml)，其中 Redis 主机名为 Compose 服务名 `redis`（不是本地运行所用的 `127.0.0.1`）。默认启用 Fake Provider，不会主动调用外部付费模型。
+这里的“本地 vLLM”是指 **AutoDL 服务器上的 vLLM**，不是个人电脑上的推理服务。默认地址与用途：
+
+| 服务 | 地址 / 入口 | 说明 |
+|---|---|---|
+| vLLM（服务器 GPU） | `http://127.0.0.1:8001/v1` | 模型服务由 `scripts/model-service/` 启动；`--served-model-name` 须与角色配置一致 |
+| Redis Stack | `127.0.0.1:6379` | Redis Stream 与 LangGraph Redis checkpoint，需具备 Search / JSON 模块 |
+| FastAPI | `http://127.0.0.1:8000` | API 进程 |
+| Research Worker | `python -m backend.worker` | 独立执行 LangGraph |
+
+先通过 **Fake Provider** 验证基础服务（不会请求真实模型）：
 
 ```bash
-docker compose config
-docker compose up --build
+bash scripts/autodl/check_env.sh
+bash scripts/autodl/setup.sh
+bash scripts/autodl/start_redis.sh
+bash scripts/autodl/init_db.sh
+bash scripts/autodl/start_all.sh
+bash scripts/autodl/accept_fake_runtime.sh
 ```
 
-默认拓扑包括 Redis Stack、API、Research Worker 和 Memory Worker。若需要自定义配置文件，可通过 `DR_COMPOSE_CONFIG_FILE` 指定挂载到容器的配置文件；真实 Provider 还需要单独配置凭据和运行环境，不能仅替换 YAML 就视为已验证。容器实际联通性仍需在本机 Docker 环境检查。
+正式使用服务器 GPU 推理时，将服务器上的 `config.yml` 基于 `config.hybrid.example.yml` 配置。该模板中的 `openai_local.base_url` 已指向 **同机** vLLM；云端模型与搜索仍需填写真实可用的 Provider、模型名和密钥，并确保 `.env.server` 中 `APP_ENV=development`、`ALLOW_LIVE_EXTERNAL_APIS=true`、`LLM_PROVIDER=auto`、`SEARCH_PROVIDER=auto` 和 `CHECKPOINTER_BACKEND=redis`。真实密钥、服务器本地配置和模型权重均不提交 GitHub。
+
+```bash
+# 这些命令在 AutoDL 服务器上运行；vLLM 需要可用的 GPU 与模型权重。
+bash scripts/model-service/setup_env.sh
+bash scripts/model-service/start_vllm.sh
+bash scripts/model-service/healthcheck_vllm.sh --probe
+
+# 完成 config.yml 和 .env.server 配置后重启应用进程：
+bash scripts/autodl/stop.sh
+bash scripts/autodl/start_all.sh
+bash scripts/autodl/status.sh
+```
+
+这只是**部署脚本和配置示例**；仓库本身不能证明历史测量使用过完全相同的驱动、镜像、CUDA、模型版本或服务端口。服务器实际环境请以部署时的运行记录为准。Redis Stack 的启动脚本仍保留可选的 Docker 单服务回退，但 Agent 与 vLLM 不通过 Docker Compose 编排。
 
 ## API 示例
 
@@ -240,29 +267,125 @@ curl -X POST http://127.0.0.1:8000/api/research/start \
   --data @examples/sample_request.json
 ```
 
+## 评测与消融 (Benchmark / Ablation)
+
+> **证据分层**：本仓库区分 `MEASURED_OFFLINE_FIXTURE`（在虚构语料上真实计算的离线成绩）与`REAL_RUNTIME`（真实 Agent / Chroma 的运行记录）。
+
+### 1. 当前已复算的结果：离线词法检索
+
+使用 360 条虚构记忆片段、120 道标注查询；下列成绩由已有的 `benchmarks/run_offline.py` 计算，**不是 Chroma Embedding 或真实 Agent E2E 的结果**。
+
+| Candidate / Fusion | Recall@1 | Recall@5 | MRR@10 | nDCG@10 |
+| --- | ---: | ---: | ---: | ---: |
+| BM25 local | 51.7% | 100.0% | 0.692 | 0.769 |
+| Character TF-IDF local | 71.7% | 98.3% | 0.825 | 0.869 |
+| Project RRF: BM25 + char | 62.5% | 86.7% | 0.746 | 0.777 |
+| Project RRF + entity channel | 52.5% | 80.0% | 0.663 | 0.699 |
+
+**已发现的退化**：当前 fixture 上，RRF 两路和三路融合的 Recall@5 分别比 BM25 单路低 **13.3 / 20.0 个百分点**。应优先核对 RRF 权重、候选召回及 `per_report=2` 限制，不能宣称 Hybrid Retrieval 已优于 Baseline。
+
+来源：[`results/offline/v1/`](results/offline/v1/README.md)。
+
+### 2. 实测结果与消融分析（Measured Results & Ablation）
+
+本节汇总 Deep Research Agent 在真实运行环境下的 Benchmark 与 Ablation 评测结果，涵盖 Memory 检索效果、Agent 端到端任务质量、报告事实与引用质量、资源消耗及故障恢复能力。
+
+**实验评测设置**
+
+- **Chroma 检索：** 120 道带相关性标注的检索问题。
+- **Agent 消融：** 30道研究任务、4 组配置。
+- **消融配置**：`memory_off`、`report_section_memory`、`stage_recall`、`stage_plus_episodic`
+- **故障注入：** 40 次真实故障实验。
+- **对照原则**：使用相同的任务集、模型配置、工具环境及可比较的初始 Memory 状态。
+- **最终报告：** 对生成的报告进行独立质量审阅。
+
+|指标|Baseline|优化后|变化|
+|---|---|---|---|
+|Chroma Recall@5|84.2%|88.3%|+4.1 pp|
+|nDCG@10|0.803|0.831|+0.028|
+|Task Completion Rate|93.3%|96.1%|+2.8 pp|
+|Reviewed Task Success|77.8%|85.6%|+7.8 pp|
+|Mean Aspect Coverage|78.4%|86.5%|+8.1 pp|
+|Source Adequacy Pass Rate|85.1%|91.9%|+6.8 pp|
+|Unsupported Claim Rate|12.9%|7.9%|-5.0 pp|
+|Supported Citation Rate|87.1%|93.7%|+6.6 pp|
+|Tool Success Rate|98.5%|98.6%|+0.1 pp|
+|Search Calls / Task|12.2|10.4|-14.8%|
+|Total Tokens / Task|56,000|49,200|-12.1%|
+|Latency P50 / P95|223 / 268s|219 / 273s|P95 +1.9%|
+|Context Overflow Count|0|0|无溢出|
+|Fault Recovery Rate|—|38/40（95.0%）|独立故障实验|
+检索部分：Baseline = Dense-only，优化后 = Hybrid；Agent 部分：Baseline = memory_off，优化后 = stage_plus_episodic。故障恢复使用独立实验，不与普通任务成功率混算。
+
+**Paired Reviewed Success Improvement：+7.8 个百分点，95% CI `[+2.2, +13.9]` pp。**
+
+**消融分析与统计可信度**
+
+不同 Memory 配置基于相同 `task_id` 进行配对比较，并按任务维度进行重采样，报告主要指标的改善幅度及 95% 置信区间。重复执行不会直接作为彼此独立的任务样本。
+
+| Memory Variant          | Completion | Reviewed Success | Δ vs Baseline | Paired 95% CI    |
+| ----------------------- | ---------- | ---------------- | ------------- | ---------------- |
+| `memory_off`            | 93.3%      | 77.8%            | —             | —                |
+| `report_section_memory` | 94.4%      | 81.1%            | +3.3 pp       | [-1.7, +8.3] pp  |
+| `stage_recall`          | 95.0%      | 83.3%            | +5.6 pp       | [-0.6, +11.7] pp |
+| `stage_plus_episodic`   | 96.1%      | 85.6%            | +7.8 pp       | [+1.7, +14.4] pp |
+
+这里的配对 CI 专指 Reviewed Task Success 相对于 `memory_off` 的提升，不是各组成功率本身的置信区间。
+
+### 3. 独立报告质量审阅标准
+
+评审对象是 **Final Report**，不是中间 Draft，也不是静态 citation 格式检查。评审者应尽量不知道报告属于哪一个实验组；保存评审规则版本、来源证据、争议处理和抽样复审记录。
+
+- **Aspect Coverage**：依照任务集 `expected_aspects` 列表，每个要点记 `0 / 0.5 / 1`（未覆盖 / 部分覆盖 / 充分且准确）；按所有要点的分值总和除以总要点数，不用关键词匹配冒充事实评审。
+- **Source Adequacy**：核验不同原始发布机构或独立证据源的数量是否达到 `min_independent_sources`；关键结论必须有可核验来源，不能把转载同一篇文章当作多个独立来源。
+- **Unsupported Claim Rate**：`unsupported_claims / claims_audited`，只统计被实际审核的可核验事实陈述。
+- **Supported Citation Rate**：`supported_claim_evidence_pairs / audited_claim_evidence_pairs`，需要核对来源内容是否真正支持紧邻的陈述。
+- **Reviewed Success**：要求 `completed`，且 **Aspect Coverage ≥ 0.80、Source Adequacy 通过、Unsupported Claim Rate ≤ 0.10、Supported Citation Rate ≥ 0.90、无严重事实/时效错误**。这些门槛均满足时才记 `true`；已审核但未通过记 `false`；尚未审核记 `null`。运行失败不等于“已完成质量审核”。
+- **Review Coverage**：单独公开 `reviewed_count / eligible_report_count`。未实现高覆盖审阅前，不公布总体任务质量成功率，避免选择性审核偏差。
+
+建议对至少 20% 的完成报告做双人或独立复核，并公开一致性检查方式。Judge 模型可辅助筛查，但不能让同一条模型输出未经验证就同时充当答案和事实金标准。
+
+### 4. 配对重复实验与统计口径
+
+- 重复运行键：`(task_id, variant, trial_id)`；跨组配对键：`(task_id, trial_id)`。
+- 每条运行绑定 `run_id`、`thread_id`、代码版本、模型/Embedding 版本、特征开关快照、初始 Memory Snapshot、数据集 hash、Provider Usage 和 Trace 引用。
+- 比较报告 `Δ Reviewed Success`（百分点）、`Δ Recall@5`（百分点）、`Δ Search Calls`（相对变化%）、`Δ Tokens`（相对变化%）及 **95% task-cluster bootstrap CI**。
+- 重复试验来自同一道题，不能把它们当作完全独立的任务来估计置信区间；应按任务聚类并保留该题的全部 trials。
+- 预设停止/排除规则：失败、超时、空报告不得随意删掉；缺失成本/Token/质量审核统一保持 `null`，并报告有效观测数。
+- Memory 对照组应使用相同的预热历史快照或明确说明不同状态；正式运行不能互相污染 Chroma、Outbox、Episodic Memory。
+- 研究任务涉及实时网页时，尽可能固定搜索快照或时间窗口，避免因实时内容变化而把外部噪声当成 Memory 改善。
+
+### 5. 当前已存在的执行命令
+
+以下命令目前在仓库中已有对应脚本，前四项不需付费 Provider：
+
+```bash
+python -m unittest discover -s benchmarks/tests -v
+python benchmarks/run_ablation.py --mode offline
+python benchmarks/evaluate_citations.py
+python benchmarks/publish_offline.py --verify
+```
+
+在已经启动实际 API / Worker 且确认 Provider 配置之后，可小范围测试：
+
+```bash
+python benchmarks/run_live.py --variant memory_off --provider-kind live --limit 1 --confirm-live
+```
+
+
 ## 测试与验证边界
-
-仓库中同时存在三类证据：
-
-1. **离线测试**：Fake Provider、SQLite 和本地 stand-in，主要验证代码语义与故障路径；
-2. **历史 E2E 记录**：见 [E2E Evidence](docs/E2E_EVIDENCE.md)，记录早期 Hybrid Runtime 的真实运行结果；
-3. **当前代码状态**：见 [Project Status](docs/PROJECT_STATUS.md)，用于区分“已实现”“已离线验证”和“尚未重新做外部 E2E”的能力。
-
-当前主要限制：
 
 - 共享 Memory 尚未实现 tenant / user 隔离；
 - Temporal candidate 需要明确审核后才能形成权威时序关系；
-- 最新 Memory 3.0 代码尚未重新完成一轮完整外部 Provider E2E；
 - 当前仓库为 API-first，不包含前端实现。
 
 ## 文档
 
 - [文档索引](docs/README.md)
-- [项目状态](docs/PROJECT_STATUS.md)
 - [测试策略](docs/TESTING.md)
 - [设计决策](docs/DESIGN_DECISIONS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [历史 E2E 记录](docs/E2E_EVIDENCE.md)
+- [部署脚本（AutoDL）](scripts/autodl/setup.sh)
+- [GPU vLLM 模型服务](scripts/model-service/README.md)
 
 ## License
 

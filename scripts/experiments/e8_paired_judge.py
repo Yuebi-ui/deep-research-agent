@@ -59,9 +59,9 @@ JUDGE_PROMPT = """你是一名独立的事实核查评审（red team）。下面
 
 
 def _task_row(thread_id: str) -> dict:
-    from deep_research.settings import get_engine_settings
+    from backend.db.engine import resolve_database_path
 
-    db = get_engine_settings().resolved_data_dir / "tasks.db"
+    db = resolve_database_path()
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:

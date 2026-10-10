@@ -1,0 +1,8 @@
+{
+  "available_rows": 0,
+  "data_origin": "historical_real_metrics_reported_in_root_readme",
+  "reason": "README has no domain/language per-task counts; former CSV consisted of 60-task synthetic fixture slices.",
+  "result_kind": "NOT_AVAILABLE_IN_ARCHIVE",
+  "source_document": "README.md",
+  "synthetic_reference_path": "results/examples/reference_v1/domain_breakdown.synthetic.csv"
+}

@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         from deep_research.memory.manager import MemoryManager
         if args.chroma is None:
             from deep_research.settings import get_engine_settings
-            args.chroma = get_engine_settings().resolved_data_dir / "chroma"
+            args.chroma = get_engine_settings().resolved_memory_data_dir / "chroma"
         manager = MemoryManager(persist_dir=str(args.chroma))
     processed = 0
     incomplete = 0

@@ -34,6 +34,7 @@ from deep_research.research_seed import (
 from deep_research.agents import supervisor_agent
 from deep_research.agents.draft_agent import write_draft_report
 from deep_research.memory.runtime import get_memory_manager
+from deep_research.memory.flags import memory_read_enabled, memory_write_enabled
 from deep_research.writer_context import build_final_report_prompt, unique_notes
 from deep_research.writer_validation import validate_report_citations
 from deep_research.llm import get_chat_model, get_chat_model_auto, writer_thinking
@@ -80,7 +81,7 @@ def store_report_memory(user_query: str, report: str) -> Any:
     ``DR_MEMORY_OUTBOX_ENABLED`` 时，runner 才会走旧的 best-effort fallback。
     无论哪条路径，最终报告本身都是任务事实源，记忆只属于派生数据。
     """
-    if not report:
+    if not memory_write_enabled() or not report:
         return None
     return _get_memory_manager().store_from_report(user_query, report)
 
@@ -96,13 +97,14 @@ async def write_research_brief(state: AgentState) -> Command[str]:
 
     # 检索历史记忆（同步 chroma + embedding 调用 → 放线程，避免阻塞事件循环）
     memory_context = ""
-    try:
-        mgr = _get_memory_manager()
-        memory_context = await asyncio.to_thread(mgr.retrieve_context, user_query)
-        if memory_context:
-            logger.info("Injected memory context into research_brief")
-    except Exception as e:
-        logger.warning("Memory retrieval failed: %s", e)
+    if memory_read_enabled():
+        try:
+            mgr = _get_memory_manager()
+            memory_context = await asyncio.to_thread(mgr.retrieve_context, user_query)
+            if memory_context:
+                logger.info("Injected memory context into research_brief")
+        except Exception as e:
+            logger.warning("Memory retrieval failed: %s", e)
 
     # 智能路由选择模型
     draft_model = get_chat_model_auto("draft", query_text=user_query)

@@ -42,9 +42,43 @@ FEATURE_FLAG_KEYS = (
     "SEARCH_PROVIDER",
     "DR_STREAM_USAGE",
     "DR_BASELINE_LOCAL_CONTEXT_LIMIT",
+    # Memory ablation gates, feature policies, durable mode and isolated storage.
+    "DR_MEMORY_READ_ENABLED",
+    "DR_MEMORY_WRITE_ENABLED",
+    "DR_MEMORY_V3_ENABLED",
+    "DR_MEMORY_HYBRID_RETRIEVAL",
+    "DR_MEMORY_STRUCTURED_RETRIEVAL",
+    "DR_MEMORY_TEMPORAL_LINKS",
+    "DR_STAGE_MEMORY_ENABLED",
+    "DR_EPISODIC_MEMORY_ENABLED",
+    "DR_MEMORY_OUTBOX_ENABLED",
+    "DR_MEMORY_DATA_DIR",
+    "DR_MEMORY_CONTEXT_MAX_CHARS",
+    "DR_STAGE_MEMORY_MAX_CHARS",
     # Phase 5B：值 None = 未设置（定版后解析为默认 on，见 research_seed.SEED_LITE_DEFAULT）
     "DR_SEED_LITE_SPECULATIVE",
 )
+
+MEMORY_FLAG_DEFAULTS = {
+    "DR_MEMORY_READ_ENABLED": "on",
+    "DR_MEMORY_WRITE_ENABLED": "on",
+    "DR_MEMORY_V3_ENABLED": "on",
+    "DR_MEMORY_HYBRID_RETRIEVAL": "on",
+    "DR_MEMORY_STRUCTURED_RETRIEVAL": "on",
+    "DR_MEMORY_TEMPORAL_LINKS": "on",
+    "DR_STAGE_MEMORY_ENABLED": "on",
+    "DR_EPISODIC_MEMORY_ENABLED": "on",
+    "DR_MEMORY_OUTBOX_ENABLED": "on",
+}
+
+
+def resolved_memory_flags(env: Mapping[str, str]) -> dict[str, bool]:
+    """Record effective (not just explicitly set) memory switch semantics."""
+    return {
+        key: str(env.get(key, default)).strip().lower() not in ("0", "off", "false", "no")
+        for key, default in MEMORY_FLAG_DEFAULTS.items()
+    }
+
 
 # thinking 策略开关（调用点级，Phase 3B E1a/E1b 的判定依据）+ 各自默认值
 # （默认值必须与 deep_research.llm 的开关语义一致，见 test_thinking_snapshot_matches_llm）
@@ -219,6 +253,13 @@ def build_config_snapshot(
         "thinking": _thinking_snapshot(env),
         "embedding": dict(embedding),
         "feature_flags": {key: env.get(key) for key in FEATURE_FLAG_KEYS},
+        "memory_flags_effective": resolved_memory_flags(env),
+        "memory_store_dir": env.get("DR_MEMORY_DATA_DIR"),
+        # The preset definitions themselves are part of the reproducibility
+        # contract even when experiment A/B flags are read from worker env.
+        "memory_presets_sha256": hashlib.sha256(
+            (Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.v1.json").read_bytes()
+        ).hexdigest(),
     }
     return scrub_secrets(snapshot)
 

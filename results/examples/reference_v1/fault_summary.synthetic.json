@@ -1,0 +1,35 @@
+{
+  "coverage_by_type": {
+    "lease_expiration": 8,
+    "memory_worker_termination": 8,
+    "outbox_storage_failure": 8,
+    "redis_unavailability": 8,
+    "research_worker_termination": 8
+  },
+  "data_origin": "synthetic_example",
+  "duplicate_writes": 0,
+  "idempotency_violations": 0,
+  "lost_jobs": 0,
+  "manual_intervention_count": 1,
+  "observed_by_type": {
+    "lease_expiration": 8,
+    "memory_worker_termination": 8,
+    "outbox_storage_failure": 8,
+    "redis_unavailability": 8,
+    "research_worker_termination": 8
+  },
+  "observed_cases": 40,
+  "planned_cases": 40,
+  "recovered_by_type": {
+    "lease_expiration": 8,
+    "memory_worker_termination": 8,
+    "outbox_storage_failure": 7,
+    "redis_unavailability": 8,
+    "research_worker_termination": 8
+  },
+  "recovered_count": 39,
+  "recovery_p50_seconds": 26.08,
+  "recovery_p95_seconds": 36.645,
+  "recovery_rate": 0.975,
+  "result_kind": "ILLUSTRATIVE_SYNTHETIC_EXAMPLE"
+}

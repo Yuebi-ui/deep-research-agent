@@ -1,6 +1,6 @@
 """Orphan Reconciler —— 回收「没人管」的非终态任务。
 
-见 `CLAUDE_CODE_SERVER_V1_LOCAL_MODEL_EXECUTION_PLAN.md` §6。
+相关行为由本模块及 `backend/runtime/claim.py` 实现。
 
 Phase G 已支持 claim 过期与崩溃恢复，但仍有一个缺口：
 

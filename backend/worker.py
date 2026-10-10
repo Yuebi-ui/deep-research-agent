@@ -2,7 +2,7 @@
 
     python -m backend.worker
 
-见 docs/phase-g-runtime-design.md §17。
+运行时职责见 `backend/runtime/` 的实现。
 
 **这是唯一正式的 LangGraph 执行者。** API 进程不再构建图、不再驱动执行。
 

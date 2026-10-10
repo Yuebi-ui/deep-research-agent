@@ -1,0 +1,41 @@
+{
+  "commands": [
+    "python benchmarks/publish_offline.py",
+    "python benchmarks/publish_offline.py --verify",
+    "python benchmarks/run_offline.py --output artifacts/benchmarks/offline_v1"
+  ],
+  "data_counts": {
+    "citation_contract_cases": 32,
+    "fault_scenarios_not_executed": 40,
+    "memory_documents": 360,
+    "memory_queries": 120,
+    "research_prompts_not_executed": 60
+  },
+  "e2e_task_success_rate": null,
+  "fault_recovery_rate": null,
+  "limits": [
+    "No Chroma embedding or live provider evaluation was executed",
+    "All public retrieval entities and measurements are fictional test fixtures",
+    "Citation contract is not source-to-claim semantic verification",
+    "Fault scenarios are a test plan, not observed recovery events"
+  ],
+  "live_memory_recall_at_5": null,
+  "origin": "computed_from_repository_code_with_no_LLM_Chroma_Redis_or_live_API_calls",
+  "provenance": "MEASURED_OFFLINE_ON_FICTIONAL_PUBLIC_FIXTURES",
+  "result_directory": "results/offline/v1",
+  "source_sha256": {
+    "benchmarks/datasets/citation_contract.v1.jsonl": "20454295d2cdf807eb5c8a860cd9916a64fc4f4d856bf282d73304e64a856390",
+    "benchmarks/datasets/fault_scenarios.v1.jsonl": "a0569a49ae53d4dc761f777b0ff7072299f2fc93ccaf224da5b25284d29be4f9",
+    "benchmarks/datasets/memory_corpus.v1.jsonl": "c4660a72f058a9a2f4ddf4c34e7dab902e0f9ada5cf316d83c8ac9c4fbec6c5a",
+    "benchmarks/datasets/memory_queries.v1.jsonl": "e9203a84b59e77de9718068a16a90f1413346a63153644620297849e52c54893",
+    "benchmarks/datasets/research_tasks.v1.jsonl": "6e32a2bc3b268214ab0b9bb9fe2546f1f8231b5431a203103df6abebf1b88cfc",
+    "benchmarks/evaluate_citations.py": "ffa5d649f67d8f391eb0d8356d0a68ae6077c8a3ad37cb43016334555fe8e2e3",
+    "benchmarks/evaluate_faults.py": "769a89ee263904e48543bad5f77c05bc2840c438d3470e5450a75ad62da2db15",
+    "benchmarks/metrics.py": "ab031d646c740386bba6be481b552a75572a02c453dd4c4764ca16925a6868bb",
+    "benchmarks/publish_offline.py": "660add64bf4da05edd4588158dbbf5f4d033626809c1febed0ea66781a3fea73",
+    "benchmarks/retrievers.py": "d28a1b731720f601e5d289095362e7c39bb1b473c9a11aa4313e3299e3b95dcf",
+    "benchmarks/run_offline.py": "c061b6ae8f8e4a4f4c9ab7976dd76945db9560b1ad706e66cf4c008047763d52",
+    "deep_research/memory/retrieval.py": "d4ce58896ea1884c4e5e5021debf67480fbe212f8cee062307743a332589052e",
+    "deep_research/writer_validation.py": "3a1506b0625cf5548840a499f423f1e2e8923966d162fd11f3a910b7bc1b4c29"
+  }
+}

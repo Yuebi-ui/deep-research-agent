@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: __init__.py
-#   Description: 大模型格式化字段定义  
+#   Description: 大模型格式化字段定义
 #***********************************************
 
 from deep_research.states.critique import Critique

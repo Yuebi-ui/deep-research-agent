@@ -16,7 +16,7 @@ from langchain_core.tools import tool
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 
-from deep_research.states.critique import Critique 
+from deep_research.states.critique import Critique
 from deep_research.states.quality import QualityMetric
 
 

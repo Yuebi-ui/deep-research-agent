@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: evaluator_agent.py
-#   Description: 报告评估智能体 
+#   Description: 报告评估智能体
 #***********************************************
 
 from langchain_core.messages import HumanMessage

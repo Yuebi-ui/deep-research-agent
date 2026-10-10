@@ -44,9 +44,12 @@ redis_ping() {
 }
 
 redis_has_modules() {
-  command -v redis-cli >/dev/null 2>&1 \
-    && redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" MODULE LIST 2>/dev/null \
-       | grep -qiE "search|json"
+  # Check BOTH Redis Search and RedisJSON; matching only one is insufficient.
+  local modules
+  command -v redis-cli >/dev/null 2>&1 || return 1
+  modules="$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" MODULE LIST 2>/dev/null)" || return 1
+  printf '%s\n' "$modules" | grep -qi 'search' \
+    && printf '%s\n' "$modules" | grep -qiE 'rejson|json'
 }
 
 # ----------------------------------------------------------------------
@@ -77,13 +80,14 @@ if command -v redis-stack-server >/dev/null 2>&1; then
       --save "" \
       --appendonly yes
 
-  if wait_for_http "http://${REDIS_HOST}:${REDIS_PORT}" "Redis" 5 2>/dev/null || sleep 2; then
-    :
-  fi
-  if redis_ping && redis_has_modules; then
-    ok "Redis Stack 已就绪"
-    exit 0
-  fi
+  # Redis uses RESP, NOT HTTP. Probe redis-cli rather than curl / wait_for_http.
+  for _ in 1 2 3 4 5; do
+    if redis_ping && redis_has_modules; then
+      ok "Redis Stack 已就绪"
+      exit 0
+    fi
+    sleep 1
+  done
   err "启动后仍未通过校验，请查看 ${LOG_DIR}/redis.log"
   exit 1
 fi
@@ -99,14 +103,19 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     redis/redis-stack-server:latest >/dev/null \
     && ok "容器已启动（dr-redis-stack）"
 
-  sleep 3
-  if redis_ping || curl -fsS --max-time 3 "http://${REDIS_HOST}:${REDIS_PORT}" >/dev/null 2>&1; then
-    ok "Redis Stack 容器已就绪"
-    echo
-    echo "提示：容器由 Docker 管理，停止用 docker stop dr-redis-stack"
-    exit 0
-  fi
-  warn "容器已启动但探活未通过，请检查 docker logs dr-redis-stack"
+  # Optional Redis-only Docker fallback. Do not treat an open port as proof
+  # of the required Redis modules or as evidence of Docker-based GPU serving.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if redis_ping && redis_has_modules; then
+      ok "Redis Stack 容器已就绪（Search + JSON 模块均可用）"
+      echo
+      echo "提示：容器由 Docker 管理，停止用 docker stop dr-redis-stack"
+      exit 0
+    fi
+    sleep 1
+  done
+  err "Redis Stack 容器未通过 PING + 模块检查，请检查 docker logs dr-redis-stack"
+  exit 1
 else
   info "Docker 不可用 —— 这在 AutoDL 普通实例上是正常的，继续下一步"
 fi

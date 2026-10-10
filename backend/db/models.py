@@ -64,8 +64,7 @@ class ResearchTask(Base):
 
     # ===== Phase G 运行时元数据 =====
     #
-    # 这些字段**不承担互斥职责**——互斥由 Redis 的 Atomic Claim 负责
-    # （见 docs/phase-g-runtime-design.md §2.5）。
+    # 这些字段**不承担互斥职责**——互斥由 Redis 的 Atomic Claim 负责。
     # 它们用于观测、重试判定与恢复决策。
 
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -108,7 +107,7 @@ class TaskReview(Base):
     """HITL 审查决定。
 
     独立成表而非在 tasks 上加列，以便保留多次审查（revise 可能反复发生）
-    的历史轨迹——见 docs/phase-g-runtime-design.md §6。
+    的历史轨迹。
 
     **消费语义的关键**：`consumed_at` 仅用于审计与观测，
     **不参与恢复决策**。恢复判断依据是 LangGraph checkpoint 中

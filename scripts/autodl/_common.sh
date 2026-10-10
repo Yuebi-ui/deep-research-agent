@@ -76,6 +76,18 @@ require_venv() {
 请先运行：bash scripts/autodl/setup.sh"
 }
 
+# ===== 数据库路径（与 backend / Alembic 同一个解析函数）=====
+resolve_task_db_path() {
+  # Important: do not fall back to data/tasks.db on errors; a different
+  # database would silently fork task state.
+  local py
+  py="$(python_bin)"
+  "$py" - <<'PY'
+from backend.db.engine import resolve_database_path
+print(resolve_database_path())
+PY
+}
+
 # ===== 进程管理 =====
 # 每个服务一个 pidfile，放在 .run/ 下（已 gitignore）
 pid_file()  { echo "${RUN_DIR}/$1.pid"; }

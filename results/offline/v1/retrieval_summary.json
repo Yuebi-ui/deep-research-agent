@@ -1,0 +1,95 @@
+{
+  "corpus_sha256": "c4660a72f058a9a2f4ddf4c34e7dab902e0f9ada5cf316d83c8ac9c4fbec6c5a",
+  "data_counts": {
+    "documents": 360,
+    "queries": 120,
+    "variants": 4
+  },
+  "data_origin": "fully_synthetic_corpus_and_queries",
+  "metrics_by_variant": {
+    "bm25_local": {
+      "ndcg_at_10": 0.769244,
+      "query_count": 120,
+      "recall_at_1": 0.516667,
+      "recall_at_10": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "reciprocal_rank_at_10": 0.691667
+    },
+    "char_tfidf_local": {
+      "ndcg_at_10": 0.869049,
+      "query_count": 120,
+      "recall_at_1": 0.716667,
+      "recall_at_10": 1.0,
+      "recall_at_3": 0.941667,
+      "recall_at_5": 0.983333,
+      "reciprocal_rank_at_10": 0.825278
+    },
+    "rrf_bm25_char": {
+      "ndcg_at_10": 0.777475,
+      "query_count": 120,
+      "recall_at_1": 0.625,
+      "recall_at_10": 0.866667,
+      "recall_at_3": 0.866667,
+      "recall_at_5": 0.866667,
+      "reciprocal_rank_at_10": 0.745833
+    },
+    "rrf_bm25_char_entity": {
+      "ndcg_at_10": 0.698506,
+      "query_count": 120,
+      "recall_at_1": 0.525,
+      "recall_at_10": 0.8,
+      "recall_at_3": 0.8,
+      "recall_at_5": 0.8,
+      "reciprocal_rank_at_10": 0.6625
+    }
+  },
+  "queries_sha256": "e9203a84b59e77de9718068a16a90f1413346a63153644620297849e52c54893",
+  "real_external_calls": 0,
+  "recall_at_5_by_category": {
+    "bm25_local": {
+      "entity_relation": 1.0,
+      "technical_method": 1.0,
+      "temporal_historical": 1.0,
+      "temporal_latest": 1.0
+    },
+    "char_tfidf_local": {
+      "entity_relation": 0.933333,
+      "technical_method": 1.0,
+      "temporal_historical": 1.0,
+      "temporal_latest": 1.0
+    },
+    "rrf_bm25_char": {
+      "entity_relation": 0.866667,
+      "technical_method": 1.0,
+      "temporal_historical": 1.0,
+      "temporal_latest": 0.6
+    },
+    "rrf_bm25_char_entity": {
+      "entity_relation": 0.833333,
+      "technical_method": 0.966667,
+      "temporal_historical": 1.0,
+      "temporal_latest": 0.4
+    }
+  },
+  "recall_at_5_by_language": {
+    "bm25_local": {
+      "en": 1.0,
+      "zh": 1.0
+    },
+    "char_tfidf_local": {
+      "en": 1.0,
+      "zh": 0.9
+    },
+    "rrf_bm25_char": {
+      "en": 0.88,
+      "zh": 0.8
+    },
+    "rrf_bm25_char_entity": {
+      "en": 0.82,
+      "zh": 0.7
+    }
+  },
+  "result_kind": "MEASURED_OFFLINE_FIXTURE",
+  "scope": "local_bm25_character_tfidf_and_project_fuse_records; NOT_Chroma_densely_embedded_or_Agent_E2E"
+}

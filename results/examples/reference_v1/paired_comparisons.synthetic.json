@@ -1,0 +1,141 @@
+{
+  "data_origin": "synthetic_example",
+  "pairs": {
+    "report_section_memory": {
+      "baseline": "memory_off",
+      "candidate": "report_section_memory",
+      "completion_transition": {
+        "baseline_completed": 53,
+        "candidate_completed": 55
+      },
+      "matched_run_pairs": 60,
+      "matched_task_count": 60,
+      "matched_unique_tasks": 60,
+      "paired_field_changes": {
+        "cost_rmb": {
+          "mean_after": 2.2764,
+          "mean_before": 2.3501,
+          "n_paired": 60,
+          "relative_change_pct": -3.1363
+        },
+        "input_tokens": {
+          "mean_after": 46598.1167,
+          "mean_before": 48870.9833,
+          "n_paired": 60,
+          "relative_change_pct": -4.6507
+        },
+        "latency_seconds": {
+          "mean_after": 219.2957,
+          "mean_before": 220.8527,
+          "n_paired": 60,
+          "relative_change_pct": -0.705
+        },
+        "output_tokens": {
+          "mean_after": 7164.4167,
+          "mean_before": 7133.7667,
+          "n_paired": 60,
+          "relative_change_pct": 0.4296
+        },
+        "search_calls": {
+          "mean_after": 11.2833,
+          "mean_before": 12.1833,
+          "n_paired": 60,
+          "relative_change_pct": -7.3871
+        }
+      },
+      "unmatched_baseline_runs": 0,
+      "unmatched_candidate_runs": 0
+    },
+    "stage_plus_episodic": {
+      "baseline": "memory_off",
+      "candidate": "stage_plus_episodic",
+      "completion_transition": {
+        "baseline_completed": 53,
+        "candidate_completed": 57
+      },
+      "matched_run_pairs": 60,
+      "matched_task_count": 60,
+      "matched_unique_tasks": 60,
+      "paired_field_changes": {
+        "cost_rmb": {
+          "mean_after": 2.1442,
+          "mean_before": 2.3501,
+          "n_paired": 60,
+          "relative_change_pct": -8.7639
+        },
+        "input_tokens": {
+          "mean_after": 43129.0833,
+          "mean_before": 48870.9833,
+          "n_paired": 60,
+          "relative_change_pct": -11.7491
+        },
+        "latency_seconds": {
+          "mean_after": 212.3733,
+          "mean_before": 220.8527,
+          "n_paired": 60,
+          "relative_change_pct": -3.8394
+        },
+        "output_tokens": {
+          "mean_after": 7176.7167,
+          "mean_before": 7133.7667,
+          "n_paired": 60,
+          "relative_change_pct": 0.6021
+        },
+        "search_calls": {
+          "mean_after": 8.85,
+          "mean_before": 12.1833,
+          "n_paired": 60,
+          "relative_change_pct": -27.3598
+        }
+      },
+      "unmatched_baseline_runs": 0,
+      "unmatched_candidate_runs": 0
+    },
+    "stage_recall": {
+      "baseline": "memory_off",
+      "candidate": "stage_recall",
+      "completion_transition": {
+        "baseline_completed": 53,
+        "candidate_completed": 56
+      },
+      "matched_run_pairs": 60,
+      "matched_task_count": 60,
+      "matched_unique_tasks": 60,
+      "paired_field_changes": {
+        "cost_rmb": {
+          "mean_after": 2.2026,
+          "mean_before": 2.3501,
+          "n_paired": 60,
+          "relative_change_pct": -6.279
+        },
+        "input_tokens": {
+          "mean_after": 44632.0333,
+          "mean_before": 48870.9833,
+          "n_paired": 60,
+          "relative_change_pct": -8.6738
+        },
+        "latency_seconds": {
+          "mean_after": 214.1017,
+          "mean_before": 220.8527,
+          "n_paired": 60,
+          "relative_change_pct": -3.0568
+        },
+        "output_tokens": {
+          "mean_after": 7188.4667,
+          "mean_before": 7133.7667,
+          "n_paired": 60,
+          "relative_change_pct": 0.7668
+        },
+        "search_calls": {
+          "mean_after": 9.85,
+          "mean_before": 12.1833,
+          "n_paired": 60,
+          "relative_change_pct": -19.1518
+        }
+      },
+      "unmatched_baseline_runs": 0,
+      "unmatched_candidate_runs": 0
+    }
+  },
+  "result_kind": "ILLUSTRATIVE_SYNTHETIC_EXAMPLE"
+}

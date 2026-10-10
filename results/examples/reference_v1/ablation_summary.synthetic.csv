@@ -1,0 +1,5 @@
+﻿variant,tasks,completed,completion_pct,reviewed_success_count,reviewed_success_pct,latency_p50_s,latency_p95_s,search_calls_per_task,input_tokens_per_task,output_tokens_per_task,total_tokens_per_task,cost_rmb_per_task_hypothetical,tool_success_pct,unsupported_claim_pct,supported_citation_pct,stale_fact_error_pct,context_overflows,data_origin
+memory_off,60,53,88.333,46,76.667,222.965,260.891,12.1833,48870.9833,7133.7667,56004.75,2.3501,91.501,16.554,81.993,12.342,0,synthetic_example
+report_section_memory,60,55,91.667,49,81.667,218.085,261.063,11.2833,46598.1167,7164.4167,53762.5333,2.2764,89.753,13.865,85.276,8.626,0,synthetic_example
+stage_recall,60,56,93.333,51,85.0,214.98,258.216,9.85,44632.0333,7188.4667,51820.5,2.2026,90.779,12.226,88.696,3.819,0,synthetic_example
+stage_plus_episodic,60,57,95.0,54,90.0,212.1,255.43,8.85,43129.0833,7176.7167,50305.8,2.1442,94.209,8.438,92.833,3.236,0,synthetic_example

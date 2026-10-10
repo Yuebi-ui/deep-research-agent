@@ -1,6 +1,6 @@
 """SSE 投影层 —— 只观察，不驱动。
 
-见 docs/phase-g-runtime-design.md §10。
+SSE 行为由本模块直接定义。
 
 **核心约束：本模块不得构建 LangGraph、不得写任务状态。**
 它只做两件事：读 Redis Stream 事件、读 DB 兜底，然后翻译成稳定的 SSE 客户端契约。

@@ -40,7 +40,7 @@ if __name__ == "logging":
 else:
     _logging = _load_stdlib_logging()
 
-    # 导出常用名称，以便在导入 deep_research.logging 时方便使用 
+    # 导出常用名称，以便在导入 deep_research.logging 时方便使用
     getLogger = _logging.getLogger
     Logger = _logging.Logger
     StreamHandler = _logging.StreamHandler
@@ -116,7 +116,7 @@ else:
         stdout_handler.setFormatter(formatter)
         root.addHandler(stdout_handler)
 
-        # WARNING及以上写到stderr 
+        # WARNING及以上写到stderr
         stderr_handler = _logging.StreamHandler(stream=sys.stderr)
         stderr_handler.setLevel(_logging.WARNING)
         stderr_handler.setFormatter(formatter)

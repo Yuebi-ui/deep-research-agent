@@ -7,6 +7,7 @@ config.yml
 *.key
 
 # Runtime state
+.run/
 data/
 logs/
 artifacts/
@@ -46,3 +47,13 @@ node_modules/
 # Test-generated local memory sandboxes
 memory3-offline-*/
 offline-memory-*/
+
+# Locally regenerated large benchmark fixtures / raw per-item details
+benchmarks/datasets/memory_corpus.v1.jsonl
+benchmarks/datasets/memory_queries.v1.jsonl
+results/offline/**/retrieval_per_query.jsonl
+results/examples/**/task_runs.synthetic.jsonl
+results/examples/**/fault_observations.synthetic.jsonl
+
+# Personal review and changeover notes (never publish)
+*_PRIVATE_CHECKLIST.md

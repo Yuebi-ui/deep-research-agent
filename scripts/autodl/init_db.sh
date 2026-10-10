@@ -15,20 +15,22 @@ PROJECT_ROOT="$(pwd)"
 
 load_env
 require_venv
+[ -f "$CONFIG_PATH" ] || die "配置文件不存在：${CONFIG_PATH}（请先运行 setup.sh 并填写 config.yml）"
 
 PY="$(python_bin)"
 export APP_ENV CONFIG_PATH CHECKPOINTER_BACKEND
 
-DB_PATH="${PROJECT_ROOT}/data/tasks.db"
+DB_PATH="$(resolve_task_db_path)" || die "无法从 config.yml 解析数据库路径"
 
 section "1. 检查现有数据库"
 if [ -f "$DB_PATH" ]; then
   SIZE="$(du -h "$DB_PATH" | cut -f1)"
-  warn "已存在数据库：data/tasks.db（${SIZE}）"
-  current="$("$PY" - <<'PY' 2>/dev/null || echo "?"
+  warn "已存在数据库：${DB_PATH}（${SIZE}）"
+  current="$(DB_PATH="$DB_PATH" "$PY" - <<'PY' 2>/dev/null || echo "?"
 import sqlite3
+import os
 try:
-    c = sqlite3.connect("data/tasks.db")
+    c = sqlite3.connect(os.environ["DB_PATH"])
     print(c.execute("select version_num from alembic_version").fetchone()[0])
 except Exception:
     print("未纳入迁移管理")
@@ -40,7 +42,7 @@ else
   ok "无现有数据库 —— 将创建全新的空库"
 fi
 
-mkdir -p "${PROJECT_ROOT}/data"
+mkdir -p "$(dirname "$DB_PATH")"
 
 section "2. 执行 alembic upgrade head"
 cd "$PROJECT_ROOT"
@@ -50,13 +52,14 @@ else
   die "alembic 失败。常见原因：
   - CONFIG_PATH 指向的 config.yml 不存在 → 先跑 setup.sh
   - config.yml 里 database.sqlite.path 指向的目录不可写
-  - 见 docs/AUTODL_SERVER_V1_DEPLOYMENT_GUIDE.md 的「常见错误」一节"
+  - 确认 Redis Stack、配置文件与 SQLite 数据目录均可正常访问"
 fi
 
 section "3. 校验结果"
-"$PY" - <<'PY'
+DB_PATH="$DB_PATH" "$PY" - <<'PY'
+import os
 import sqlite3, sys
-conn = sqlite3.connect("data/tasks.db")
+conn = sqlite3.connect(os.environ["DB_PATH"])
 tables = sorted(r[0] for r in conn.execute("select name from sqlite_master where type='table'"))
 rev = conn.execute("select version_num from alembic_version").fetchone()[0]
 n = conn.execute("select count(*) from tasks").fetchone()[0]
@@ -74,6 +77,6 @@ if missing:
 print("    ✓ schema 正确")
 PY
 
-ok "数据库就绪：data/tasks.db"
+ok "数据库就绪：${DB_PATH}"
 echo
 echo "下一步：bash scripts/autodl/start_all.sh"

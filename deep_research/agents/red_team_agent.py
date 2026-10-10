@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: red_team_agent.py
-#   Description: Red-Team智能体 
+#   Description: Red-Team智能体
 #***********************************************
 
 from langchain_core.messages import SystemMessage, HumanMessage

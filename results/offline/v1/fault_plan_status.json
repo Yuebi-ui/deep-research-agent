@@ -1,0 +1,23 @@
+{
+  "coverage_by_type": {
+    "lease_expiration": 8,
+    "memory_worker_termination": 8,
+    "outbox_storage_failure": 8,
+    "redis_unavailability": 8,
+    "research_worker_termination": 8
+  },
+  "data_origin": null,
+  "duplicate_writes": null,
+  "idempotency_violations": null,
+  "lost_jobs": null,
+  "manual_intervention_count": 0,
+  "observed_by_type": {},
+  "observed_cases": 0,
+  "planned_cases": 40,
+  "recovered_by_type": {},
+  "recovered_count": 0,
+  "recovery_p50_seconds": null,
+  "recovery_p95_seconds": null,
+  "recovery_rate": null,
+  "result_kind": "NOT_EXECUTED"
+}

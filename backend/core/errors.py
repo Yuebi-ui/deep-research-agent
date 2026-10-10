@@ -11,8 +11,7 @@ class InfrastructureError(RuntimeError):
     """关键基础设施不可用。
 
     在 ``APP_ENV=production`` 下，启动阶段抛出此异常会直接阻止应用启动
-    （fail fast），而不是静默降级到不可靠的运行时语义
-    ——参见 ENGINEERING_OPTIMIZATION_PLAN_V3.md §3.2。
+    （fail fast），而不是静默降级到不可靠的运行时语义。
     """
 
 

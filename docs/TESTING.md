@@ -64,3 +64,12 @@ snapshot production-ready, run at least:
 Passing offline tests does not prove provider quality, production throughput,
 network reliability, multi-tenant data isolation or factual correctness of generated
 reports.
+
+### Public evaluation fixtures
+
+```bash
+python -m unittest discover -s benchmarks/tests -v
+python benchmarks/publish_offline.py --verify
+```
+
+🔴 These reproduce lexical ranking / project RRF fusion tests and citation parser checks on fictional records. See [benchmarks](../benchmarks/README.md) and [results](../results/README.md). They are not live Chroma or provider E2E scores.

@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: llm.py
-#   Description: 大模型客户端 
+#   Description: 大模型客户端
 #***********************************************
 
 
@@ -17,7 +17,7 @@ from deep_research import logging as dr_logging
 # 初始化logger
 logger = dr_logging.get_logger(__name__)
 
-# 缓存CONFIG，避免重复导入(config_path, stage, loader_id) 
+# 缓存CONFIG，避免重复导入(config_path, stage, loader_id)
 _CONFIG_CACHE: Dict[tuple[str, str, int], Dict[str, Any]] = {}
 
 # 默认的stage
@@ -236,7 +236,7 @@ def get_chat_model(
     # 加载config.yam
     cfg = _load_stage_config(resolved_stage, config_path)
 
-    # 获取role配置 
+    # 获取role配置
     roles_cfg = cfg.get("roles", {})
     if role not in roles_cfg:
         # 清除cache重新加载一次

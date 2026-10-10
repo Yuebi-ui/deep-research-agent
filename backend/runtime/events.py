@@ -1,6 +1,6 @@
 """Event Plane —— Redis Streams。
 
-见 docs/phase-g-runtime-design.md §9。
+事件流约定由本模块定义。
 
 **按任务分片**（`dr:events:{thread_id}`）而非全局单流：
 

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "note": "Presets are worker environment requirements, not recorded results. Stop all workers (including dedicated memory worker), let pending outbox jobs drain, apply flags in the worker environment and restart. Use per-variant memory directories; seed the same starting corpus into memory-enabled variants. For complete run isolation, also use separate task databases and Redis namespaces/instances.",
+  "variants": {
+    "memory_off": {
+      "DR_MEMORY_V3_ENABLED": "off",
+      "DR_MEMORY_HYBRID_RETRIEVAL": "off",
+      "DR_MEMORY_STRUCTURED_RETRIEVAL": "off",
+      "DR_STAGE_MEMORY_ENABLED": "off",
+      "DR_EPISODIC_MEMORY_ENABLED": "off",
+      "DR_MEMORY_READ_ENABLED": "off",
+      "DR_MEMORY_WRITE_ENABLED": "off",
+      "DR_MEMORY_DATA_DIR": "data/ablation/memory_off",
+      "DR_MEMORY_OUTBOX_ENABLED": "on"
+    },
+    "report_section_memory": {
+      "DR_MEMORY_V3_ENABLED": "on",
+      "DR_MEMORY_HYBRID_RETRIEVAL": "on",
+      "DR_MEMORY_STRUCTURED_RETRIEVAL": "on",
+      "DR_STAGE_MEMORY_ENABLED": "off",
+      "DR_EPISODIC_MEMORY_ENABLED": "off",
+      "DR_MEMORY_READ_ENABLED": "on",
+      "DR_MEMORY_WRITE_ENABLED": "on",
+      "DR_MEMORY_DATA_DIR": "data/ablation/report_section_memory",
+      "DR_MEMORY_OUTBOX_ENABLED": "on"
+    },
+    "stage_recall": {
+      "DR_MEMORY_V3_ENABLED": "on",
+      "DR_MEMORY_HYBRID_RETRIEVAL": "on",
+      "DR_MEMORY_STRUCTURED_RETRIEVAL": "on",
+      "DR_STAGE_MEMORY_ENABLED": "on",
+      "DR_EPISODIC_MEMORY_ENABLED": "off",
+      "DR_MEMORY_READ_ENABLED": "on",
+      "DR_MEMORY_WRITE_ENABLED": "on",
+      "DR_MEMORY_DATA_DIR": "data/ablation/stage_recall",
+      "DR_MEMORY_OUTBOX_ENABLED": "on"
+    },
+    "stage_plus_episodic": {
+      "DR_MEMORY_V3_ENABLED": "on",
+      "DR_MEMORY_HYBRID_RETRIEVAL": "on",
+      "DR_MEMORY_STRUCTURED_RETRIEVAL": "on",
+      "DR_STAGE_MEMORY_ENABLED": "on",
+      "DR_EPISODIC_MEMORY_ENABLED": "on",
+      "DR_MEMORY_READ_ENABLED": "on",
+      "DR_MEMORY_WRITE_ENABLED": "on",
+      "DR_MEMORY_DATA_DIR": "data/ablation/stage_plus_episodic",
+      "DR_MEMORY_OUTBOX_ENABLED": "on"
+    }
+  },
+  "intentionally_not_ablatable_by_flag": [
+    "claim_verification (fixed graph path)",
+    "Citation Validator (report post-check)",
+    "Temporal review decisions (require audit evidence)",
+    "Durable Outbox reliability (separate fault benchmark, not report quality ablation)"
+  ]
+}

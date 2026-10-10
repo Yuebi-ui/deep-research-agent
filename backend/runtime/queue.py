@@ -1,6 +1,6 @@
 """Job Transport —— Redis Stream + consumer group。
 
-见 docs/phase-g-runtime-design.md §8。
+队列行为以本模块实现为准。
 
 **为什么用 Stream 而非 LIST**：Stream 原生提供 at-least-once 语义、`XACK`
 确认、`XPENDING` / `XAUTOCLAIM` 未确认消息恢复——正好覆盖执行包 §9 要求的

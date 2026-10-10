@@ -52,11 +52,11 @@ def _default_db_path() -> str:
     return str(get_engine_settings().resolved_data_dir / "tasks.db")
 
 
-def resolve_database_url() -> str:
-    """解析数据库连接串。
+def resolve_database_path() -> Path:
+    """Return the canonical task DB file path, independent of the process cwd.
 
-    **这是测试隔离的唯一注入点。** 测试应替换本函数，而不是改环境变量或
-    默认路径——`config.yml` 中显式的 `database.sqlite.path` 会覆盖默认值。
+    The database.sqlite.path config takes priority over DR_DATA_DIR. API,
+    Alembic, AutoDL and health checks must use this one resolution rule.
     """
     cfg = _load_db_config()
     backend = str(cfg.get("backend") or SUPPORTED_BACKEND).strip().lower()
@@ -65,8 +65,7 @@ def resolve_database_url() -> str:
         raise UnsupportedDatabaseBackend(
             f"数据库后端 {backend!r} 已被移除，当前唯一受支持的后端是 "
             f"{SUPPORTED_BACKEND!r}。请将 config.yml 中 "
-            f"`stages.<stage>.database.backend` 改为 'sqlite'，"
-            "或参考 CLAUDE_CODE_NEXT_PHASE_EXECUTION_PLAN.md §0.5.4。"
+            f"`stages.<stage>.database.backend` 改为 'sqlite'。"
         )
 
     if backend != SUPPORTED_BACKEND:
@@ -74,8 +73,16 @@ def resolve_database_url() -> str:
             f"未知的数据库后端 {backend!r}；当前仅支持 {SUPPORTED_BACKEND!r}。"
         )
 
-    path = cfg.get("sqlite", {}).get("path") or _default_db_path()
-    return f"sqlite+pysqlite:///{Path(path)}"
+    value = (cfg.get("sqlite") or {}).get("path") or _default_db_path()
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = get_engine_settings().project_root / path
+    return path.resolve()
+
+
+def resolve_database_url() -> str:
+    """SQLAlchemy URI for :func:`resolve_database_path` (test injection point)."""
+    return f"sqlite+pysqlite:///{resolve_database_path()}"
 
 
 def _create_engine(url: str) -> Engine:

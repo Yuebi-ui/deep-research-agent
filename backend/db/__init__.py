@@ -7,7 +7,7 @@
     backend.services   把域规则与持久化组合（业务服务）
 
 当前唯一受支持的数据库后端是 **SQLite**。
-MySQL 已移除，原因见 ENGINEERING_OPTIMIZATION_PLAN_V3.md 与执行包 §0.5.4：
+MySQL 已移除：
 它既未在 requirements 中声明、也未安装，实际不可运行，且与 SQLite 的
 `verification` 语义已经分叉。
 """

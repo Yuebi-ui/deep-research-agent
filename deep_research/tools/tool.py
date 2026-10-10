@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: tools.py
-#   Description: 可调用工具列表  
+#   Description: 可调用工具列表
 #***********************************************
 
 import hashlib
@@ -361,7 +361,7 @@ def deduplicate_search_results(search_results: List[dict]) -> dict:
     """对urls去重，以免处理重复文档
 
     Args:
-        search_results: 搜索结果列表List[Dict] 
+        search_results: 搜索结果列表List[Dict]
 
     Returns:
         去重后的搜索结果Dict
@@ -409,10 +409,10 @@ def format_search_output(summarized_results: dict) -> str:
     """对summarize后的结果做格式化（选择title, url, summary三个核心字段）
 
     Args:
-        summarized_results: summarize后的results 
+        summarized_results: summarize后的results
 
     Returns:
-        格式化后的输出 
+        格式化后的输出
     """
     if not summarized_results:
         return "No valid search results found. Please try different search queries or use a different search API."
@@ -502,8 +502,8 @@ def think_tool(reflection: str) -> str:
 
 
 
-def refine_draft_report(research_brief: Annotated[str, InjectedToolArg], 
-                        findings: Annotated[str, InjectedToolArg], 
+def refine_draft_report(research_brief: Annotated[str, InjectedToolArg],
+                        findings: Annotated[str, InjectedToolArg],
                         draft_report: Annotated[str, InjectedToolArg]):
 
     """根据新的研究发现(findings)完善目前的报告草稿(draft_report)
@@ -544,4 +544,3 @@ _think_tool = tool(parse_docstring=True)(think_tool)
 
 # 精修tool
 _refine_draft_report_tool = tool(parse_docstring=True)(refine_draft_report)
-

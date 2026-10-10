@@ -1,0 +1,51 @@
+{
+  "ablation_config": {
+    "path": "benchmarks/configs/runtime_ablation.v1.json",
+    "sha256": "b9fa80d7e9344ab52eb0e116559461729a2a6a95f4949d1154e4d7d6ae4f4abc"
+  },
+  "data_origin": "synthetic_example",
+  "date_label": "synthetic_fixture_generated_from_repo_snapshot",
+  "fault_catalog": {
+    "count": 40,
+    "path": "benchmarks/datasets/fault_scenarios.v1.jsonl",
+    "sha256": "a0569a49ae53d4dc761f777b0ff7072299f2fc93ccaf224da5b25284d29be4f9"
+  },
+  "fixture_version": "reference_v1",
+  "generator": {
+    "path": "benchmarks/fixtures/build_full_reference_results.py",
+    "sha256": "e5ea29a577d30f03b28176366c721574f74c4bc12b40867d7dcfcab032e6df51"
+  },
+  "hypothetical_model_and_prices": {
+    "cost_kind": "formula_generated_reference_not_actual_invoice",
+    "input_rmb_per_million_tokens": 28.0,
+    "model": "NOT_EXECUTED_reference_model",
+    "output_rmb_per_million_tokens": 112.0,
+    "provider": "none",
+    "search_rmb_per_call": 0.015
+  },
+  "limitations": [
+    "No agents, model, vector DB, real search tool, Redis or Worker were executed.",
+    "All task reviews and source-support audit counts were generated mathematically, not checked by humans.",
+    "Cost uses fictional unit prices and is not a provider quote or measured invoice.",
+    "Published empirical offline fixture results remain in results/offline/v1/ and are not altered.",
+    "Successful task review is an illustrative label, not evidence of report correctness."
+  ],
+  "measured_offline_fixture_snapshot": {
+    "note": "separate real offline fixture output, not synthetic E2E data",
+    "path": "results/offline/v1/retrieval_summary.json",
+    "sha256": "a9f525a61baee4eb7371601201228aa2dcd1a71b605b47fd3c5a4fb0ebcb9d89"
+  },
+  "result_kind": "ILLUSTRATIVE_SYNTHETIC_EXAMPLE",
+  "sample_sizes": {
+    "fault_scenarios": 40,
+    "runtime_variants": 4,
+    "task_variant_rows": 240,
+    "tasks": 60
+  },
+  "seed": 20261009,
+  "task_data_set": {
+    "count": 60,
+    "path": "benchmarks/datasets/research_tasks.v1.jsonl",
+    "sha256": "6e32a2bc3b268214ab0b9bb9fe2546f1f8231b5431a203103df6abebf1b88cfc"
+  }
+}

@@ -21,7 +21,10 @@ if [ -f "${ENV_FILE}" ]; then
   ok ".env.server 已存在，保持不变"
 else
   cp "${PROJECT_ROOT}/.env.example" "${ENV_FILE}"
-  ok "已创建 .env.server（来自 .env.example）"
+  # .env.example 面向离线开发（sqlite checkpoint）；服务器 Worker 使用 Redis
+  # checkpoint 才能保持与 config.server.example.yml 的跨进程恢复配置一致。
+  sed -i 's/^CHECKPOINTER_BACKEND=.*/CHECKPOINTER_BACKEND=redis/' "${ENV_FILE}"
+  ok "已创建 .env.server（Fake Provider + Redis checkpoint，来自 .env.example）"
 fi
 
 if [ -f "${PROJECT_ROOT}/config.yml" ]; then

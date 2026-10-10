@@ -1,0 +1,48 @@
+{
+  "code_revision_for_original_experiments": null,
+  "data_origin": "historical_real_metrics_reported_in_root_readme",
+  "dataset_hash_for_original_experiments": null,
+  "historical_chroma_query_results_in_archive": false,
+  "historical_fault_events_in_archive": false,
+  "historical_independent_reviews_in_archive": false,
+  "historical_model_and_embedding_versions": null,
+  "historical_raw_runs_in_archive": false,
+  "historical_run_date": null,
+  "missing_details": [
+    "exact trial counts / per-group success numerators",
+    "audited claim/citation denominators",
+    "per-domain E2E breakdown",
+    "fault-type outcomes and durations",
+    "original bootstrap samples for both CI values",
+    "provider billing / unit prices"
+  ],
+  "not_the_source_of_live_data": [
+    "benchmarks/fixtures/build_full_reference_results.py (synthetic fixture only)",
+    "results/offline/v1/fault_plan_status.json (public offline fault plan only)",
+    "benchmarks/datasets/research_tasks.v1.jsonl (60 public prompts, not proven to be the historical 30-task run set)"
+  ],
+  "original_uploaded_readme_sha256": "dc643a1a3c87910928951738bd4e67c331f1fc76b72270f511b92ad7d557fd0c",
+  "previous_alignment_manifest_readme_sha256": "3a5f44a0295d5fe26e27e7f2942a2c49363443503ab67bbcdd99a4201a71198a",
+  "published_live_files": [
+    "results/live/v1/e2e_summary.json",
+    "results/live/v1/fault_summary.json",
+    "results/live/v1/retrieval_summary.json",
+    "results/live/v1/paired_comparisons.json",
+    "results/live/v1/ablation_summary.csv"
+  ],
+  "readme_checksum_note": "Current root_readme_sha256 covers the AutoDL documentation cleanup. original_uploaded_readme_sha256 records the root README in the user-supplied deep-research-agent.zip. previous_alignment_manifest_readme_sha256 preserves the earlier digest found in that ZIP manifest, which did not match the uploaded README even before this cleanup. Historical metric values and missing raw-evidence status are unchanged.",
+  "reporting_basis": "historical real results reported in README, supplied as authoritative by the project owner",
+  "result_kind": "README_REPORTED_REAL_RUNTIME",
+  "root_readme_sha256": "1c8e4baf21ed2d9d7f4e712f8f13cdd55c86dc8d2b6611285e8447599f6f2612",
+  "sample_sizes": {
+    "agent_per_variant_run_observations": null,
+    "agent_total_run_observations": null,
+    "agent_unique_tasks_reported": 30,
+    "agent_variants_reported": 4,
+    "chroma_retrieval_queries_reported": 120,
+    "fault_runs_reported": 40
+  },
+  "source_document": "README.md",
+  "source_traceability": "README is the sole surviving source for these published measurements; cross-file transcription is testable, experimental reproduction is not.",
+  "verification_command": "python benchmarks/verify_readme_results.py"
+}

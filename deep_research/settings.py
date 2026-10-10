@@ -42,6 +42,9 @@ class EngineSettings(BaseSettings):
     # 以下路径为 None 时回退到 ``项目根目录/<默认值>``
     config_path: Path | None = Field(None, validation_alias="CONFIG_PATH")
     data_dir: Path | None = Field(None, validation_alias="DR_DATA_DIR")
+    # Isolate Chroma and episodic memory across ablation variants without
+    # moving the application's task database or report history.
+    memory_data_dir: Path | None = Field(None, validation_alias="DR_MEMORY_DATA_DIR")
     log_dir: Path | None = Field(None, validation_alias="DEEP_RESEARCH_LOG_DIR")
 
     # 付费外部 API 的总开关。
@@ -79,6 +82,11 @@ class EngineSettings(BaseSettings):
     @property
     def resolved_log_dir(self) -> Path:
         return self._resolve(self.log_dir, "logs")
+
+    @property
+    def resolved_memory_data_dir(self) -> Path:
+        return (self.resolved_data_dir if self.memory_data_dir is None
+                else self._resolve(self.memory_data_dir, "data"))
 
     # ===== 环境判定 =====
 

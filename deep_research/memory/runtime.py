@@ -38,7 +38,7 @@ def get_memory_manager() -> "MemoryManager":
         with _manager_lock:
             if _manager is None:
                 _manager = MemoryManager(
-                    persist_dir=str(get_engine_settings().resolved_data_dir / "chroma")
+                    persist_dir=str(get_engine_settings().resolved_memory_data_dir / "chroma")
                 )
     return _manager
 
@@ -48,7 +48,7 @@ def get_episode_store() -> "EpisodeMemoryStore":
     """Return the process-local episodic-memory store for the configured data dir."""
     from deep_research.memory.episodes import EpisodeMemoryStore
 
-    path = get_engine_settings().resolved_data_dir / "research_episodes.sqlite3"
+    path = get_engine_settings().resolved_memory_data_dir / "research_episodes.sqlite3"
     return EpisodeMemoryStore(path)
 
 

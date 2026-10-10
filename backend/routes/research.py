@@ -1,6 +1,6 @@
 """研究任务 API 端点：命令、查询、事件投影。
 
-Phase G 之后本模块**不再拥有执行状态**（见 docs/phase-g-runtime-design.md §16）：
+Phase G 之后本模块**不再拥有执行状态**：
 
 ```text
 POST /start    创建任务并入队（立即返回，不等研究完成）

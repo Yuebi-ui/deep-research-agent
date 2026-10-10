@@ -16,7 +16,7 @@
 7. 打印简短 summary
 
 本脚本 **不** 重新实现部署：Redis / vLLM / API / Worker 必须先运行。
-前置条件与启动命令见 docs/BASELINE_RUNBOOK.md。
+前置启动入口见 `scripts/autodl/` 与 `scripts/model-service/README.md`。
 
 本脚本不做任何优化、不修改业务行为 —— 只运行与观测。
 """
@@ -170,7 +170,7 @@ def _memory_doc_count() -> int | None:
         from deep_research.settings import get_engine_settings
 
         store = VectorMemoryStore(
-            persist_dir=str(get_engine_settings().resolved_data_dir / "chroma")
+            persist_dir=str(get_engine_settings().resolved_memory_data_dir / "chroma")
         )
         return int(store.count())
     except Exception:
@@ -286,9 +286,9 @@ def wait_for_terminal(
 
 
 def read_task_row(thread_id: str) -> dict:
-    from deep_research.settings import get_engine_settings
+    from backend.db.engine import resolve_database_path
 
-    db_path = get_engine_settings().resolved_data_dir / "tasks.db"
+    db_path = resolve_database_path()
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
@@ -604,6 +604,9 @@ def main(argv: list[str] | None = None) -> int:
             "schema_version": args.expect_embedding_schema_version,
         },
         allow_stale_services=args.allow_stale_services,
+        memory_preset=(args.variant if args.variant in json.loads(
+            (REPO_ROOT / "benchmarks/configs/runtime_ablation.v1.json").read_text(encoding="utf-8")
+        )["variants"] else None),
     )
     print("[baseline] preflight self-check ...")
     probes = SystemProbes(api_base=args.api_base, repo_root=REPO_ROOT, run_dir=REPO_ROOT / ".run")

@@ -44,6 +44,7 @@ class Expectations:
     context_limit: int | None = None
     thinking: Mapping[str, bool] = field(default_factory=dict)  # {"claim_verify": False, ...}
     embedding: Mapping[str, Any] = field(default_factory=dict)  # provider/model/dimension/schema_version
+    memory_preset: str | None = None  # require exact real worker switches for named ablation
     require_worker: bool = True
     allow_stale_services: bool = False
 
@@ -206,7 +207,7 @@ class SystemProbes:
             from deep_research.memory.schema_guard import inspect_collection
             from deep_research.settings import get_engine_settings
 
-            persist_dir = get_engine_settings().resolved_data_dir / "chroma"
+            persist_dir = get_engine_settings().resolved_memory_data_dir / "chroma"
             if not persist_dir.exists():
                 return []
             client = chromadb.PersistentClient(
@@ -305,6 +306,32 @@ def _run_checks(expectations: Expectations, probes: Any) -> tuple[list[Check], d
     from deep_research.benchmark.fingerprint import FEATURE_FLAG_KEYS
 
     observations["worker_feature_flags"] = {key: env_map.get(key) for key in FEATURE_FLAG_KEYS}
+
+    if expectations.memory_preset is not None:
+        from deep_research.benchmark.fingerprint import MEMORY_FLAG_DEFAULTS, resolved_memory_flags
+
+        name = expectations.memory_preset
+        preset_file = Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.v1.json"
+        presets = json.loads(preset_file.read_text(encoding="utf-8"))["variants"]
+        if name not in presets:
+            raise ValueError(f"Unknown memory ablation preset: {name}")
+        configured = presets[name]
+        expected_flags = resolved_memory_flags(configured)
+        observed_flags = resolved_memory_flags(env_map)
+        expected = {key: expected_flags[key] for key in MEMORY_FLAG_DEFAULTS}
+        expected["DR_MEMORY_DATA_DIR"] = configured.get("DR_MEMORY_DATA_DIR")
+        observed = {key: observed_flags[key] for key in MEMORY_FLAG_DEFAULTS}
+        observed["DR_MEMORY_DATA_DIR"] = env_map.get("DR_MEMORY_DATA_DIR")
+        # Never certify an ablation based solely on the runner shell when the
+        # actual executing worker's /proc environment is unavailable.
+        has_worker_env = isinstance((worker or {}).get("env"), Mapping)
+        ok = has_worker_env and expected == observed
+        checks.append(Check(
+            "memory_ablation_preset", ok,
+            f"preset={name}; worker env {'matches' if ok else 'missing/mismatched'}",
+            expected, observed,
+        ))
+        observations["memory_flags_source"] = "worker_env" if has_worker_env else "unverified"
 
     if expectations.thinking:
         observed_thinking = {

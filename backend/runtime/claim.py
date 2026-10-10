@@ -1,6 +1,6 @@
 """Atomic Execution Claim —— 任务执行的**唯一**互斥。
 
-见 docs/phase-g-runtime-design.md §2。
+互斥语义由本模块实现。
 
 核心原则：
 

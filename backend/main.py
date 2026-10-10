@@ -45,7 +45,7 @@ async def _rate_limit_middleware(request: Request, call_next):
 
 # 注：Phase G 之后 API **不再预热 LLM 与 Agent 图**。
 #
-# 图由 Worker 拥有（docs/phase-g-runtime-design.md §16）：
+# 图由 Worker 拥有：
 # API 只做命令、查询与事件投影，既不构建 LangGraph，也不持有 checkpointer。
 # 原先的 _warmup_optional() 已移除。
 
@@ -96,7 +96,7 @@ async def _init_critical(settings) -> None:
     # 那些任务**可以被 worker 从 checkpoint 恢复** —— 再标记为失败反而是错的。
     #
     # 恢复职责归 worker：未 ack 的 job 由 reclaim_stale 接管，claim 过期后
-    # 由新 worker 从 checkpoint 继续（见 docs/phase-g-runtime-design.md §4）。
+    # 由新 worker 从 checkpoint 继续。
 
 
 @asynccontextmanager
@@ -167,8 +167,7 @@ async def health() -> HealthResponse:
     # 增强健康检查：报告关键组件状态
     import os
     status = {"status": "ok", "components": {}}
-    data_dir = get_settings().data_dir
-    persist_dir = str(data_dir / "chroma")
+    persist_dir = str(get_settings().engine.resolved_memory_data_dir / "chroma")
 
     # Redis：runtime 的关键依赖（入队 + 事件通道）
     try:
@@ -217,9 +216,10 @@ async def health() -> HealthResponse:
     except Exception as e:
         status["components"]["memory_schema"] = f"error: {e}"
 
-    # SQLite check
+    # SQLite check: use exactly the same configured path as ORM and Alembic.
     try:
-        db_path = str(data_dir / "tasks.db")
+        from backend.db.engine import resolve_database_path
+        db_path = str(resolve_database_path())
         status["components"]["sqlite"] = "ok" if os.path.exists(db_path) else "not_initialized"
     except Exception as e:
         status["components"]["sqlite"] = f"error: {e}"

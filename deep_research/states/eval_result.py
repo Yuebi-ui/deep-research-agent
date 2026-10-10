@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: eval_result.py
-#   Description: 报告评估结果结构化输出 
+#   Description: 报告评估结果结构化输出
 #***********************************************
 
 from pydantic import BaseModel, Field

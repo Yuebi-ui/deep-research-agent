@@ -44,7 +44,8 @@ BRANCH_NODES = ("write_draft_report", "build_research_seed", "supervisor_subgrap
 
 
 def _task_row(thread_id: str) -> dict:
-    db = get_engine_settings().resolved_data_dir / "tasks.db"
+    from backend.db.engine import resolve_database_path
+    db = resolve_database_path()
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:

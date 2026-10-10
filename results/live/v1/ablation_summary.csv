@@ -1,0 +1,5 @@
+variant,unique_task_prompts_reported,task_completion_pct,reviewed_success_pct,reviewed_success_delta_pp,paired_ci_95_lower_pp,paired_ci_95_upper_pp,source,raw_rows_available
+memory_off,30,93.3,77.8,,,,README.md,no
+report_section_memory,30,94.4,81.1,3.3,-1.7,8.3,README.md,no
+stage_recall,30,95.0,83.3,5.6,-0.6,11.7,README.md,no
+stage_plus_episodic,30,96.1,85.6,7.8,1.7,14.4,README.md,no

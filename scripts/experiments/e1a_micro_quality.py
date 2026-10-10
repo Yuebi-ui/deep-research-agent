@@ -31,9 +31,9 @@ def _load_fixed_draft() -> tuple[str, str]:
     """固定 draft：优先读 Phase 2 某次 run 的真实 final_report（截断到 extractor 上限）。"""
     import sqlite3
 
-    from deep_research.settings import get_engine_settings
+    from backend.db.engine import resolve_database_path
 
-    db_path = get_engine_settings().resolved_data_dir / "tasks.db"
+    db_path = resolve_database_path()
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     row = conn.execute(

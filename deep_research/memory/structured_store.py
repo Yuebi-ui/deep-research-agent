@@ -80,7 +80,7 @@ class StructuredMemoryStore:
     def __init__(
         self, persist_dir: str | None = None, embedder: EmbeddingClient | None = None
     ) -> None:
-        persist_dir = persist_dir or str(get_engine_settings().resolved_data_dir / "chroma")
+        persist_dir = persist_dir or str(get_engine_settings().resolved_memory_data_dir / "chroma")
         self._client = chromadb.PersistentClient(
             path=persist_dir, settings=ChromaSettings(anonymized_telemetry=False)
         )

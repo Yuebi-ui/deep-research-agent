@@ -1,6 +1,6 @@
 """单个 Job 的执行。
 
-见 docs/phase-g-runtime-design.md §17.2。
+运行时入口由 `backend.worker` 调用。
 
 这是 Phase G 的核心：**唯一正式 LangGraph 执行者**。
 
@@ -558,6 +558,8 @@ class TaskRunner:
         from backend.runtime.memory_outbox import (
             enabled as durable_memory_enabled, MemoryOutboxEnqueueError,
         )
+        from deep_research.memory.flags import memory_write_enabled
+
         durable_memory = durable_memory_enabled()
         if durable_memory:
             save_atomic = getattr(self._repo, "save_completed_with_outbox", None)
@@ -585,8 +587,9 @@ class TaskRunner:
         # Completion ordering is intentional. In durable mode the outbox row was
         # committed atomically with the report before this event. Only rollback
         # mode schedules the legacy best-effort enrichment below.
-        if not durable_memory:
+        if not durable_memory and memory_write_enabled():
             # Rollback mode: preserve legacy best-effort scheduling semantics.
+            # A true no-memory ablation must not enter the fallback writer.
             await self._run_post_completion(
                 thread_id, user_query, report,
                 research_trace=research_trace, research_generation=research_generation,
@@ -609,7 +612,9 @@ class TaskRunner:
           `wait_idle()`、退出时 `drain()`；
         - 没有（测试/嵌入式）→ 内联执行，保持旧语义（绝不 fire-and-forget）。
         """
-        if not report:
+        from deep_research.memory.flags import memory_write_enabled
+
+        if not memory_write_enabled() or not report:
             return
         if self._post_completion is None:
             await self._enrich_memory(
@@ -635,7 +640,10 @@ class TaskRunner:
         raises into the task state machine; failures are observability signals.
         """
         from deep_research.agent_builder import store_report_memory
+        from deep_research.memory.flags import memory_write_enabled
 
+        if not memory_write_enabled():
+            return {"doc_id": None, "error": None, "episodes": 0, "elapsed_s": 0.0}
         started = time.monotonic()
         doc_id: Any = None
         error: str | None = None

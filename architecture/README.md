@@ -114,4 +114,3 @@ Shared process-local memory clients are created by
 - Temporal "possible change" records are candidates; explicit review creates the
   authoritative decision.
 - The repository does not currently provide tenant-isolated memory.
-- The current Memory 3.0 code has not yet undergone a fresh external-provider E2E run.

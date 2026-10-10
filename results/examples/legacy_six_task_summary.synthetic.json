@@ -1,0 +1,136 @@
+{
+  "interpretation": "reviewed_success, evidence support and cost are null unless explicit audited observations exist; status completed is NOT a quality pass",
+  "paired_comparison": {
+    "baseline": "memory_off",
+    "candidate": "stage_plus_episodic",
+    "completion_transition": {
+      "baseline_completed": 5,
+      "candidate_completed": 6
+    },
+    "matched_task_count": 6,
+    "paired_field_changes": {
+      "cost_rmb": {
+        "mean_after": null,
+        "mean_before": null,
+        "n_paired": 0,
+        "relative_change_pct": null
+      },
+      "input_tokens": {
+        "mean_after": 40240.0,
+        "mean_before": 45640.0,
+        "n_paired": 6,
+        "relative_change_pct": -11.8317
+      },
+      "latency_seconds": {
+        "mean_after": 171.99,
+        "mean_before": 189.0,
+        "n_paired": 6,
+        "relative_change_pct": -9.0
+      },
+      "output_tokens": {
+        "mean_after": 6437.5,
+        "mean_before": 6437.5,
+        "n_paired": 6,
+        "relative_change_pct": 0.0
+      },
+      "search_calls": {
+        "mean_after": 10.0,
+        "mean_before": 13.0,
+        "n_paired": 6,
+        "relative_change_pct": -23.0769
+      }
+    }
+  },
+  "result_kind": "ILLUSTRATIVE",
+  "total_records": 12,
+  "variants": {
+    "memory_off": {
+      "avg_cost_rmb": null,
+      "avg_input_tokens": 45640.0,
+      "avg_output_tokens": 6437.5,
+      "avg_search_calls": 13.0,
+      "completed_tasks": 5,
+      "coverage_by_field": {
+        "citations_audited": 0,
+        "claims_audited": 0,
+        "cost_rmb": 0,
+        "input_tokens": 6,
+        "latency_seconds": 6,
+        "output_tokens": 6,
+        "reviewed_success": 0,
+        "search_calls": 6,
+        "tool_calls": 6,
+        "tool_successes": 6
+      },
+      "latency_measured_count": 6,
+      "latency_p50_seconds": 189.0,
+      "latency_p95_seconds": 198.0,
+      "n_tasks": 6,
+      "reviewed_success_rate": null,
+      "reviewed_task_count": 0,
+      "supported_citation_rate": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "task_completion_rate": 0.833333,
+      "tool_success_rate": {
+        "denominator": 78,
+        "numerator": 72,
+        "rate": 0.923077,
+        "tasks_with_annotation": 6
+      },
+      "unsupported_claim_rate": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      }
+    },
+    "stage_plus_episodic": {
+      "avg_cost_rmb": null,
+      "avg_input_tokens": 40240.0,
+      "avg_output_tokens": 6437.5,
+      "avg_search_calls": 10.0,
+      "completed_tasks": 6,
+      "coverage_by_field": {
+        "citations_audited": 0,
+        "claims_audited": 0,
+        "cost_rmb": 0,
+        "input_tokens": 6,
+        "latency_seconds": 6,
+        "output_tokens": 6,
+        "reviewed_success": 0,
+        "search_calls": 6,
+        "tool_calls": 6,
+        "tool_successes": 6
+      },
+      "latency_measured_count": 6,
+      "latency_p50_seconds": 171.99,
+      "latency_p95_seconds": 180.18,
+      "n_tasks": 6,
+      "reviewed_success_rate": null,
+      "reviewed_task_count": 0,
+      "supported_citation_rate": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "task_completion_rate": 1.0,
+      "tool_success_rate": {
+        "denominator": 78,
+        "numerator": 72,
+        "rate": 0.923077,
+        "tasks_with_annotation": 6
+      },
+      "unsupported_claim_rate": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      }
+    }
+  }
+}

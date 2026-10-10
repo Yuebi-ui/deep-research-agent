@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: critique.py
-#   Description: 批评Agent的格式化输出  
+#   Description: 批评Agent的格式化输出
 #***********************************************
 
 from pydantic import BaseModel, Field

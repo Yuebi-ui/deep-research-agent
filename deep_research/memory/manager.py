@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 from langchain_core.messages import HumanMessage
 
 from deep_research.memory.embeddings import EmbeddingClient
+from deep_research.memory.flags import memory_read_enabled, memory_write_enabled
 from deep_research.memory.vector_store import VectorMemoryStore, SECTION_COLLECTION
 from deep_research.memory.structured_store import StructuredMemoryStore
 from deep_research.memory.schemas import Entity, MemoryClaim, Evidence, Contradiction
@@ -72,7 +73,7 @@ STRUCTURED_EXTRACT_PROMPT = """你是一名知识工程师。下面仅是某份�
 
 
 def _enabled(name: str, default: str = "on") -> bool:
-    return os.getenv(name, default).strip().lower() not in {"0", "off", "false"}
+    return os.getenv(name, default).strip().lower() not in {"0", "off", "false", "no"}
 
 
 def _normalized(text: str) -> str:
@@ -141,7 +142,7 @@ class MemoryManager:
 
     def retrieve_context(self, user_query: str, top_k: int = 3) -> str:
         """RRF from section-vector, section-keyword, legacy reports and Claim/entity leads."""
-        if not user_query or top_k <= 0:
+        if not memory_read_enabled() or not user_query or top_k <= 0:
             return ""
         lines: list[str] = []
         try:
@@ -293,7 +294,7 @@ class MemoryManager:
 
     def store_from_report(self, user_query: str, final_report: str) -> str | None:
         """Content-addressed and retryable; newer reports never overwrite older ones."""
-        if not final_report or len(final_report) < 100:
+        if not memory_write_enabled() or not final_report or len(final_report) < 100:
             return None
         digest = hashlib.sha256(_normalized(final_report).encode("utf-8")).hexdigest()
         source_digest = hashlib.sha256(final_report.encode("utf-8")).hexdigest()
@@ -636,6 +637,8 @@ class MemoryManager:
             self._structured.upsert_contradictions(list(candidates.values()))
 
     def extract_and_store_structured(self, report_text: str, report_id: str = "") -> dict:
+        if not memory_write_enabled():
+            return {"entities": 0, "claims": 0, "evidence": 0, "contradictions": 0}
         counts, _complete = self._extract_and_store_structured(report_text, report_id)
         return counts
 

@@ -1,0 +1,28 @@
+{
+  "audit_note": "38/40 comes from root README. Unknown per-type outcomes, durations and integrity counters are not inferred from the prior synthetic fixture.",
+  "coverage_by_type": {
+    "lease_expiration": 8,
+    "memory_worker_termination": 8,
+    "outbox_storage_failure": 8,
+    "redis_unavailability": 8,
+    "research_worker_termination": 8
+  },
+  "coverage_by_type_scope": "public fault scenario catalog only; historical executed-type breakdown unavailable",
+  "data_origin": "historical_real_metrics_reported_in_root_readme",
+  "duplicate_writes": null,
+  "idempotency_violations": null,
+  "lost_jobs": null,
+  "manual_intervention_count": null,
+  "observation_ids_available": false,
+  "observed_by_type": null,
+  "observed_cases": 40,
+  "planned_cases": 40,
+  "recovered_by_type": null,
+  "recovered_count": 38,
+  "recovery_p50_seconds": null,
+  "recovery_p95_seconds": null,
+  "recovery_rate": 0.95,
+  "result_kind": "README_REPORTED_REAL_RUNTIME",
+  "source_document": "README.md / 评测与消融 / 实测结果与消融分析",
+  "source_status": "reported_by_project_owner; historical raw event traces absent from archive"
+}

@@ -55,8 +55,10 @@ else
 fi
 
 if [ "$REDIS_READY" -eq 1 ]; then
-  if redis-cli -h 127.0.0.1 -p 6379 MODULE LIST 2>/dev/null | grep -qiE "search|json"; then
-    ok "检测到 Redis Stack 模块（RediSearch / RedisJSON）"
+  redis_modules="$(redis-cli -h 127.0.0.1 -p 6379 MODULE LIST 2>/dev/null || true)"
+  if printf '%s\n' "$redis_modules" | grep -qi 'search' \
+      && printf '%s\n' "$redis_modules" | grep -qiE 'rejson|json'; then
+    ok "检测到 Redis Stack 所需的 Search 与 JSON 模块"
   else
     err "该 Redis 缺少 RediSearch/RedisJSON 模块（不是 Redis Stack）"
     note_fail
@@ -66,7 +68,7 @@ else
 fi
 
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  info "Docker 可用（可用于运行 Redis Stack 或完整 Compose）"
+  info "Docker 可用（仅可选作 Redis Stack 单服务回退，不是 Agent/vLLM 部署要求）"
 else
   info "Docker 不可用 —— AutoDL 脚本仍可按直接进程模式运行"
 fi

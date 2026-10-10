@@ -16,7 +16,7 @@ from deep_research.llm import get_chat_model, with_role_metadata
 from deep_research.states import ResearcherState, ResearcherOutputState
 from deep_research.utils import get_today_str
 from deep_research.tools import _tavily_search_tool, _think_tool
-from deep_research.prompts import RESEARCH_AGENT_PROMPT, COMPRESS_RESEARCH_SYSTEM_PROMPT, COMPRESS_RESEARCH_HUMAN_PROMPT 
+from deep_research.prompts import RESEARCH_AGENT_PROMPT, COMPRESS_RESEARCH_SYSTEM_PROMPT, COMPRESS_RESEARCH_HUMAN_PROMPT
 from deep_research import logging as dr_logging
 from deep_research.memory.stage_retrieval import stage_enabled, retrieve_stage_context
 from deep_research.memory.episodes import extract_research_trace
@@ -158,7 +158,7 @@ def compress_research(state: ResearcherState) -> dict:
     # 从messages和tools抽取raw notes
     raw_notes = [
         str(m.content) for m in filter_messages(
-            state["researcher_messages"], 
+            state["researcher_messages"],
             include_types=["tool", "ai"]
         )
     ]
@@ -209,7 +209,7 @@ agent_builder.add_conditional_edges(
         "compress_research": "compress_research", # 返回 final answer
     },
 )
-agent_builder.add_edge("tool_node", "llm_call") # 继续搜索获得更多结果 
+agent_builder.add_edge("tool_node", "llm_call") # 继续搜索获得更多结果
 agent_builder.add_edge("compress_research", END)
 
 # Compile the agent

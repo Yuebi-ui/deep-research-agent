@@ -1,0 +1,343 @@
+{
+  "cost_is_hypothetical": true,
+  "data_origin": "synthetic_example",
+  "faults": {
+    "coverage_by_type": {
+      "lease_expiration": 8,
+      "memory_worker_termination": 8,
+      "outbox_storage_failure": 8,
+      "redis_unavailability": 8,
+      "research_worker_termination": 8
+    },
+    "data_origin": "synthetic_example",
+    "duplicate_writes": 0,
+    "idempotency_violations": 0,
+    "lost_jobs": 0,
+    "manual_intervention_count": 1,
+    "observed_by_type": {
+      "lease_expiration": 8,
+      "memory_worker_termination": 8,
+      "outbox_storage_failure": 8,
+      "redis_unavailability": 8,
+      "research_worker_termination": 8
+    },
+    "observed_cases": 40,
+    "planned_cases": 40,
+    "recovered_by_type": {
+      "lease_expiration": 8,
+      "memory_worker_termination": 8,
+      "outbox_storage_failure": 7,
+      "redis_unavailability": 8,
+      "research_worker_termination": 8
+    },
+    "recovered_count": 39,
+    "recovery_p50_seconds": 26.08,
+    "recovery_p95_seconds": 36.645,
+    "recovery_rate": 0.975,
+    "result_kind": "ILLUSTRATIVE_SYNTHETIC_EXAMPLE"
+  },
+  "interpretation": "Completion is not quality success; absent audits are null; n_runs counts repeated trials.",
+  "price_assumptions": {
+    "input_rmb_per_million_tokens": 28.0,
+    "output_rmb_per_million_tokens": 112.0,
+    "provider": "fictional_blended_price_example_NOT_A_QUOTE",
+    "search_rmb_per_call": 0.015
+  },
+  "quality_review_is_hypothetical": true,
+  "result_kind": "ILLUSTRATIVE_SYNTHETIC_EXAMPLE",
+  "total_records": 240,
+  "variants": {
+    "memory_off": {
+      "aspect_coverage_counts": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "avg_aspect_coverage": null,
+      "avg_cost_rmb": 2.3501,
+      "avg_input_tokens": 48870.9833,
+      "avg_output_tokens": 7133.7667,
+      "avg_search_calls": 12.1833,
+      "avg_tool_calls": 15.1,
+      "avg_total_tokens": 56004.75,
+      "completed_tasks": 53,
+      "context_overflows": 0,
+      "coverage_by_field": {
+        "aspect_coverage": 0,
+        "aspects_audited": 0,
+        "aspects_covered": 0,
+        "citations_audited": 53,
+        "claims_audited": 53,
+        "cost_rmb": 60,
+        "independent_sources_verified": 0,
+        "input_tokens": 60,
+        "latency_seconds": 60,
+        "output_tokens": 60,
+        "required_independent_sources": 0,
+        "reviewed_success": 60,
+        "search_calls": 60,
+        "source_adequacy_pass": 0,
+        "tool_calls": 60,
+        "tool_successes": 60
+      },
+      "hypothetical_billing_formula_verified": true,
+      "latency_measured_count": 60,
+      "latency_p50_seconds": 222.965,
+      "latency_p95_seconds": 260.891,
+      "n_distinct_trials": 1,
+      "n_runs": 60,
+      "n_tasks": 60,
+      "n_unique_tasks": 60,
+      "review_coverage_rate": 1.0,
+      "reviewed_success_rate": 0.766667,
+      "reviewed_task_count": 60,
+      "runs_per_trial": {
+        "1": 60
+      },
+      "source_adequacy_pass_rate": null,
+      "source_audited_run_count": 0,
+      "stale_fact_error_rate": 0.123418,
+      "stale_fact_errors": 39,
+      "supported_citation_rate": {
+        "denominator": 1094,
+        "numerator": 897,
+        "rate": 0.819927,
+        "tasks_with_annotation": 53
+      },
+      "task_completion_rate": 0.883333,
+      "temporal_facts_audited": 316,
+      "tool_success_rate": {
+        "denominator": 906,
+        "numerator": 829,
+        "rate": 0.915011,
+        "tasks_with_annotation": 60
+      },
+      "unsupported_claim_rate": {
+        "denominator": 1480,
+        "numerator": 245,
+        "rate": 0.165541,
+        "tasks_with_annotation": 53
+      }
+    },
+    "report_section_memory": {
+      "aspect_coverage_counts": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "avg_aspect_coverage": null,
+      "avg_cost_rmb": 2.2764,
+      "avg_input_tokens": 46598.1167,
+      "avg_output_tokens": 7164.4167,
+      "avg_search_calls": 11.2833,
+      "avg_tool_calls": 14.15,
+      "avg_total_tokens": 53762.5333,
+      "completed_tasks": 55,
+      "context_overflows": 0,
+      "coverage_by_field": {
+        "aspect_coverage": 0,
+        "aspects_audited": 0,
+        "aspects_covered": 0,
+        "citations_audited": 55,
+        "claims_audited": 55,
+        "cost_rmb": 60,
+        "independent_sources_verified": 0,
+        "input_tokens": 60,
+        "latency_seconds": 60,
+        "output_tokens": 60,
+        "required_independent_sources": 0,
+        "reviewed_success": 60,
+        "search_calls": 60,
+        "source_adequacy_pass": 0,
+        "tool_calls": 60,
+        "tool_successes": 60
+      },
+      "hypothetical_billing_formula_verified": true,
+      "latency_measured_count": 60,
+      "latency_p50_seconds": 218.085,
+      "latency_p95_seconds": 261.063,
+      "n_distinct_trials": 1,
+      "n_runs": 60,
+      "n_tasks": 60,
+      "n_unique_tasks": 60,
+      "review_coverage_rate": 1.0,
+      "reviewed_success_rate": 0.816667,
+      "reviewed_task_count": 60,
+      "runs_per_trial": {
+        "1": 60
+      },
+      "source_adequacy_pass_rate": null,
+      "source_audited_run_count": 0,
+      "stale_fact_error_rate": 0.086262,
+      "stale_fact_errors": 27,
+      "supported_citation_rate": {
+        "denominator": 1107,
+        "numerator": 944,
+        "rate": 0.852755,
+        "tasks_with_annotation": 55
+      },
+      "task_completion_rate": 0.916667,
+      "temporal_facts_audited": 313,
+      "tool_success_rate": {
+        "denominator": 849,
+        "numerator": 762,
+        "rate": 0.897527,
+        "tasks_with_annotation": 60
+      },
+      "unsupported_claim_rate": {
+        "denominator": 1529,
+        "numerator": 212,
+        "rate": 0.138653,
+        "tasks_with_annotation": 55
+      }
+    },
+    "stage_plus_episodic": {
+      "aspect_coverage_counts": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "avg_aspect_coverage": null,
+      "avg_cost_rmb": 2.1442,
+      "avg_input_tokens": 43129.0833,
+      "avg_output_tokens": 7176.7167,
+      "avg_search_calls": 8.85,
+      "avg_tool_calls": 11.8,
+      "avg_total_tokens": 50305.8,
+      "completed_tasks": 57,
+      "context_overflows": 0,
+      "coverage_by_field": {
+        "aspect_coverage": 0,
+        "aspects_audited": 0,
+        "aspects_covered": 0,
+        "citations_audited": 57,
+        "claims_audited": 57,
+        "cost_rmb": 60,
+        "independent_sources_verified": 0,
+        "input_tokens": 60,
+        "latency_seconds": 60,
+        "output_tokens": 60,
+        "required_independent_sources": 0,
+        "reviewed_success": 60,
+        "search_calls": 60,
+        "source_adequacy_pass": 0,
+        "tool_calls": 60,
+        "tool_successes": 60
+      },
+      "hypothetical_billing_formula_verified": true,
+      "latency_measured_count": 60,
+      "latency_p50_seconds": 212.1,
+      "latency_p95_seconds": 255.43,
+      "n_distinct_trials": 1,
+      "n_runs": 60,
+      "n_tasks": 60,
+      "n_unique_tasks": 60,
+      "review_coverage_rate": 1.0,
+      "reviewed_success_rate": 0.9,
+      "reviewed_task_count": 60,
+      "runs_per_trial": {
+        "1": 60
+      },
+      "source_adequacy_pass_rate": null,
+      "source_audited_run_count": 0,
+      "stale_fact_error_rate": 0.032362,
+      "stale_fact_errors": 10,
+      "supported_citation_rate": {
+        "denominator": 1172,
+        "numerator": 1088,
+        "rate": 0.928328,
+        "tasks_with_annotation": 57
+      },
+      "task_completion_rate": 0.95,
+      "temporal_facts_audited": 309,
+      "tool_success_rate": {
+        "denominator": 708,
+        "numerator": 667,
+        "rate": 0.94209,
+        "tasks_with_annotation": 60
+      },
+      "unsupported_claim_rate": {
+        "denominator": 1600,
+        "numerator": 135,
+        "rate": 0.084375,
+        "tasks_with_annotation": 57
+      }
+    },
+    "stage_recall": {
+      "aspect_coverage_counts": {
+        "denominator": 0,
+        "numerator": 0,
+        "rate": null,
+        "tasks_with_annotation": 0
+      },
+      "avg_aspect_coverage": null,
+      "avg_cost_rmb": 2.2026,
+      "avg_input_tokens": 44632.0333,
+      "avg_output_tokens": 7188.4667,
+      "avg_search_calls": 9.85,
+      "avg_tool_calls": 12.8333,
+      "avg_total_tokens": 51820.5,
+      "completed_tasks": 56,
+      "context_overflows": 0,
+      "coverage_by_field": {
+        "aspect_coverage": 0,
+        "aspects_audited": 0,
+        "aspects_covered": 0,
+        "citations_audited": 56,
+        "claims_audited": 56,
+        "cost_rmb": 60,
+        "independent_sources_verified": 0,
+        "input_tokens": 60,
+        "latency_seconds": 60,
+        "output_tokens": 60,
+        "required_independent_sources": 0,
+        "reviewed_success": 60,
+        "search_calls": 60,
+        "source_adequacy_pass": 0,
+        "tool_calls": 60,
+        "tool_successes": 60
+      },
+      "hypothetical_billing_formula_verified": true,
+      "latency_measured_count": 60,
+      "latency_p50_seconds": 214.98,
+      "latency_p95_seconds": 258.216,
+      "n_distinct_trials": 1,
+      "n_runs": 60,
+      "n_tasks": 60,
+      "n_unique_tasks": 60,
+      "review_coverage_rate": 1.0,
+      "reviewed_success_rate": 0.85,
+      "reviewed_task_count": 60,
+      "runs_per_trial": {
+        "1": 60
+      },
+      "source_adequacy_pass_rate": null,
+      "source_audited_run_count": 0,
+      "stale_fact_error_rate": 0.038194,
+      "stale_fact_errors": 11,
+      "supported_citation_rate": {
+        "denominator": 1150,
+        "numerator": 1020,
+        "rate": 0.886957,
+        "tasks_with_annotation": 56
+      },
+      "task_completion_rate": 0.933333,
+      "temporal_facts_audited": 288,
+      "tool_success_rate": {
+        "denominator": 770,
+        "numerator": 699,
+        "rate": 0.907792,
+        "tasks_with_annotation": 60
+      },
+      "unsupported_claim_rate": {
+        "denominator": 1554,
+        "numerator": 190,
+        "rate": 0.122265,
+        "tasks_with_annotation": 56
+      }
+    }
+  }
+}

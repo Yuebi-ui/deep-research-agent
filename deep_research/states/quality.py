@@ -1,6 +1,6 @@
 #***********************************************
 #      Filename: quality.py
-#   Description: 质量控制格式化输出  
+#   Description: 质量控制格式化输出
 #***********************************************
 
 from typing_extensions import TypedDict

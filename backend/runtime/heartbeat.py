@@ -1,6 +1,6 @@
 """Claim 心跳续约。
 
-见 docs/phase-g-runtime-design.md §3。
+心跳续约逻辑由本模块实现。
 
 ```text
 claim_ttl >= 3 × heartbeat_interval

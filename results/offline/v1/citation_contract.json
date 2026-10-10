@@ -1,0 +1,10 @@
+{
+  "dataset_sha256": "20454295d2cdf807eb5c8a860cd9916a64fc4f4d856bf282d73304e64a856390",
+  "factual_grounding_rate": null,
+  "matches_expected": 32,
+  "mismatches": 0,
+  "result_kind": "MEASURED_STATIC_CONTRACT_ON_SYNTHETIC_CASES",
+  "sample_count": 32,
+  "semantic_unsupported_cases_passing_static": 4,
+  "warning": "URL membership and numbering do not establish evidence support"
+}

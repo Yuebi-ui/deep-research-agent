@@ -36,10 +36,11 @@ if [ "$ping_out" = "PONG" ]; then
   found=""
   if printf '%s' "$raw_modules" | grep -qi "search"; then found="${found}search "; fi
   if printf '%s' "$raw_modules" | grep -qiE "rejson|json"; then found="${found}ReJSON "; fi
-  if [ -n "$found" ]; then
+  if printf '%s' "$raw_modules" | grep -qi 'search' \
+       && printf '%s' "$raw_modules" | grep -qiE 'rejson|json'; then
     ok "模块: ${found}"
   else
-    err "未检测到 RediSearch / RedisJSON —— 请使用 Redis Stack"
+    err "缺少 Search 或 JSON 模块 —— 请使用完整 Redis Stack"
   fi
   info "job 队列长度: $(redis_do XLEN dr:jobs)"
   info "claim 数量:   $(redis_do --scan --pattern 'dr:claim:*' | wc -l | tr -d ' ')"
@@ -59,11 +60,14 @@ else
 fi
 
 section "数据库"
-if [ -f "${PROJECT_ROOT}/data/tasks.db" ]; then
-  "$(python_bin)" - <<'PY' 2>/dev/null || warn "无法读取数据库（可能尚未初始化）"
+DB_PATH="$(resolve_task_db_path)" || die "无法解析配置中的数据库路径"
+if [ -f "$DB_PATH" ]; then
+  info "SQLite: ${DB_PATH}"
+  DB_PATH="$DB_PATH" "$(python_bin)" - <<'PY' 2>/dev/null || warn "无法读取数据库（可能尚未初始化）"
+import os
 import sqlite3
 try:
-    c = sqlite3.connect("data/tasks.db")
+    c = sqlite3.connect(os.environ["DB_PATH"])
     print("    revision  :", c.execute("select version_num from alembic_version").fetchone()[0])
     print("    任务总数  :", c.execute("select count(*) from tasks").fetchone()[0])
     rows = list(c.execute("select status, count(*) from tasks group by status order by 2 desc"))
@@ -74,7 +78,7 @@ except Exception as exc:
     print("    读取失败:", exc)
 PY
 else
-  warn "数据库不存在（先跑 init_db.sh）"
+  warn "数据库不存在：${DB_PATH}（先跑 init_db.sh）"
 fi
 
 section "最近日志（各 3 行）"

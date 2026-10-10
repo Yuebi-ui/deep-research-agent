@@ -10,6 +10,7 @@ import asyncio
 import html
 import os
 
+from deep_research.memory.flags import memory_read_enabled
 from deep_research.memory.runtime import (
     get_episode_store as _runtime_episode_store,
     get_memory_manager,
@@ -24,7 +25,7 @@ def _enabled(name: str, default: str = "on") -> bool:
 
 
 def stage_enabled() -> bool:
-    return _enabled("DR_STAGE_MEMORY_ENABLED")
+    return memory_read_enabled() and _enabled("DR_STAGE_MEMORY_ENABLED")
 
 
 def episodic_enabled() -> bool:
