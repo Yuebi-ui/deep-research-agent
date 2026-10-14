@@ -210,7 +210,7 @@ def _install_stub_graph(monkeypatch, graph: StubGraph) -> None:
 
     # Phase 5B：runner 会按 lineage 显式传 speculative（新任务传 None = 按 env）
     monkeypatch.setattr(
-        ab, "_create_builder", lambda with_hitl=True, speculative=None: _FakeBuilder(graph)
+        ab, "_create_builder", lambda with_hitl=True, quality_gate_version=None: _FakeBuilder(graph)
     )
 
 

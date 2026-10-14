@@ -111,6 +111,12 @@ async def supervisor(state: SupervisorState) -> Command[Literal["supervisor_tool
         max_researcher_iterations=max_researcher_iterations
     )
     messages = [SystemMessage(content=system_message)] + supervisor_messages
+    if state.get("quality_gate_version") in (1, 2):
+        messages.insert(1, SystemMessage(content=(
+            "当前为独立 Quality Gate：仅收集和压缩证据，"
+            "不要调用 refine_draft_report。独立 Evaluator/Red Team 会在并行汇合后审查，"
+            "Final Writer 将负责唯一的报告综合写作。"
+        )))
     # Use live historical clues when planning, then checkpoint the bounded hint
     # for later rounds. Requery only when quality feedback changes the problem.
     hint = state.get("supervisor_memory_hint", "") or ""
@@ -208,6 +214,11 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
         # 注意：**不要**回写 research_brief。它是恒等透传（值没变），
         # 但在 Phase 5A 投机模式里本子图与 draft 分支同 superstep，
         # 两边同时写 LastValue 通道会触发 InvalidUpdateError。
+        if state.get("quality_gate_version") in (1, 2):
+            # V1's parent graph owns the independent Red Team (which finally
+            # sees BOTH real Draft and Findings). Do not critique the brief
+            # here or waste a redundant Red-Team LLM call.
+            return Command(goto=END, update=quarantine_update(state, final_notes))
         return Command(
                 goto="red_team",
                 update={
@@ -305,6 +316,15 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
 
             # 开始调用大模型结合已有信息修正调研报告
             for tool_call in refine_report_calls:
+                if state.get("quality_gate_version") in (1, 2):
+                    # Preserve the tool-call protocol if the LLM nevertheless
+                    # requests this legacy tool; do not re-write or re-evaluate Draft.
+                    tool_messages.append(ToolMessage(
+                        content="Quality Gate V1 defers draft synthesis to Final Writer. "
+                                "Continue research or call ResearchComplete.",
+                        name=tool_call["name"], tool_call_id=tool_call["id"],
+                    ))
+                    continue
                 if not state.get("draft_report", ""):
                     # Phase 5A：投机研究模式下 draft 与 research 并行，首轮 superstep
                     # 里 draft_report 尚不存在。必须回一条 ToolMessage（否则下一次

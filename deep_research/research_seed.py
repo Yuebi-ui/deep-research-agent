@@ -24,34 +24,20 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Mapping
 
 SEED_VERSION = "seed-lite-v1"
 
-#: 投机研究开关：**默认 on**（Phase 5B 定版：2026-10-07 人工审核后翻默认）。
-#: 语义：新 lineage 默认走投机拓扑（Research 在 HITL Accept 前并行执行，
-#: 只有被 ACCEPT 的当前 generation 进入下游）。显式 `=off` 一键回滚为
-#: Phase 5A 之前的串行语义（在途 lineage 不受影响，按 checkpoint 标记恢复）。
+# Compatibility shim: parallel routing is now mandatory for all new tasks.
+# The historical environment flag is intentionally ignored so a stale
+# DR_SEED_LITE_SPECULATIVE=off cannot silently restore a serial graph.
 SEED_LITE_ENV = "DR_SEED_LITE_SPECULATIVE"
 SEED_LITE_DEFAULT = "on"
 
 
 def seed_lite_speculative_enabled() -> bool:
-    """投机研究（seed-lite）模式是否开启（默认 on；显式 off 可回滚）。
-
-    读取时机：每次构图（`_create_builder`）与每个新 lineage 的起点
-    （`write_research_brief`）—— 与 thinking 开关不同，本开关不参与
-    import-time 模型构造，因此**不需要重启即可在同一进程内切换**；
-    但 benchmark 的指纹/preflight 仍按 env 记录，A/B 两组分别重启 worker 更干净。
-
-    注意：本开关只决定**新** lineage 如何起步；已存在的 lineage 由 checkpoint
-    里的 `research_generation` 标记决定语义（见 runner._lineage_is_speculative）。
-    """
-    return (
-        os.environ.get(SEED_LITE_ENV, SEED_LITE_DEFAULT).strip().lower()
-        in ("1", "true", "yes", "on")
-    )
+    """Deprecated compatibility accessor; production topology is always parallel."""
+    return True
 
 #: supervisor 首轮看到的种子消息（与旧行为 "Here is the draft report: ..." 对位）
 SEED_MESSAGE_TEMPLATE = (
@@ -110,11 +96,10 @@ def seed_metrics(seed: dict[str, Any], *, draft_chars: int | None = None) -> dic
 # 实现基于**状态事实**而不是 env 开关：
 #   - `research_generation >= 1` ⇔ 这是一条**投机 lineage**（由 write_research_brief
 #     在投机模式起点写入 = 1；每次 reject/regenerate 由 regenerate 节点 +1）。
-#   - 串行 lineage 从不写该字段（缺省 0）。
+#   - V3 rejects old serial checkpoints (generation 0).
 #
-# 为什么 lineage 语义不读 env：开关只决定「**新** lineage 怎么起步」；已存在的
-# lineage 在 restart/resume 时保持自己的语义 —— 这样开关中途翻转（回滚）不会
-# 让在途任务跑错拓扑（runner 依据 checkpoint 里的标记选择 resume 拓扑）。
+# V3 new tasks always start at generation=1. Existing parallel checkpoints
+# retain their generation on resume; old serial checkpoints are rejected.
 #
 # 为什么结果必须放独立字段：`notes` 是 `operator.add` reducer，`[]` 清不掉、
 # 回显会翻倍（tests/test_phase5a_langgraph_semantics.py 已锁定）—— 因此
@@ -161,20 +146,19 @@ def build_speculative_payload(
 
 
 def quarantine_update(state: Mapping[str, Any] | None, final_notes: list[str]) -> dict[str, Any]:
-    """研究分支收尾时的落点选择（supervisor 子图两条退出路径共用）。
+    """Always quarantine research findings until generation-fenced acceptance.
 
-    - 串行 lineage：写入 `notes`（历史行为，逐字不变）；
-    - 投机 lineage：写入 `speculative_research`（隔离；ACCEPT 前不进入下游）。
+    Serial direct writes into authoritative notes have been removed.
     """
-    if speculative_lineage(state):
-        return {
-            "speculative_research": build_speculative_payload(
-                generation=active_generation(state),
-                research_brief=(state or {}).get("research_brief", "") or "",
-                notes=final_notes,
-            )
-        }
-    return {"notes": final_notes}
+    if not speculative_lineage(state):
+        raise ResearchFenceError("parallel research requires generation >= 1")
+    return {
+        "speculative_research": build_speculative_payload(
+            generation=active_generation(state),
+            research_brief=(state or {}).get("research_brief", "") or "",
+            notes=final_notes,
+        )
+    }
 
 
 def fenced_accept_update(state: Mapping[str, Any] | None) -> dict[str, Any]:

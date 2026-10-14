@@ -18,10 +18,9 @@ import pytest
 # ===== 1. 环境前置（必须早于 deep_research 的任何导入）=====
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("ALLOW_LIVE_EXTERNAL_APIS", "false")
-# Phase 5B 定版后 DR_SEED_LITE_SPECULATIVE **默认 on**（生产默认 = 投机拓扑）。
-# 测试必须确定性：统一钉为 off（= 串行语义），需要投机语义的测试自行
-# monkeypatch 成 on 或显式传 speculative=True —— 两条路径都有独立覆盖。
-os.environ["DR_SEED_LITE_SPECULATIVE"] = "off"
+# Parallel-only V3: the historical speculative flag is ignored by the runtime.
+# Keep the test environment consistent with the sole supported topology.
+os.environ["DR_SEED_LITE_SPECULATIVE"] = "on"
 # Legacy fixture expectations use the old best-effort path; new tests override.
 os.environ.setdefault("DR_MEMORY_OUTBOX_ENABLED", "off")
 

@@ -118,7 +118,7 @@ async def run_burst(
         }
 
     results = await asyncio.gather(*(_one(spec) for spec in requests))
-    return {"concurrency": concurrency, "wall_s": round(now() - t0, 3), "results": list(results)}
+    return {"concurrency": concurrency, "wall_s": now() - t0, "results": list(results)}
 
 
 # ===== 统计（纯函数）=====

@@ -40,6 +40,7 @@ class SupervisorState(TypedDict):
     # ---- Phase 5B：与父图同名的 generation/fencing 字段（子图只读 generation，
     #      投机 lineage 下把收尾结果写进 speculative_research 而非 notes）----
     research_generation: int = 0                                        # active 研究代数（从父图流入）
+    quality_gate_version: int = 0                                       # V1 bypasses refine and child red team
     speculative_research: Optional[dict] = None
     # Observed tool traces from child Researchers; additive across supervisor rounds.
     research_trace: Annotated[list[dict], operator.add] = []

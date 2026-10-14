@@ -135,13 +135,25 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(request: Request, exc: RequestValidationError):
+        # Pydantic model_validator stores the raised ValueError inside
+        # error["ctx"]["error"].  JSONResponse cannot serialize Exception
+        # objects: keep validation detail but turn exception values into text.
+        errors = []
+        for raw_error in exc.errors()[:10]:
+            error = dict(raw_error)
+            if isinstance(error.get("ctx"), dict):
+                error["ctx"] = {
+                    key: str(value) if isinstance(value, BaseException) else value
+                    for key, value in error["ctx"].items()
+                }
+            errors.append(error)
         return JSONResponse(
             status_code=422,
             content=error_body(
                 CODE_VALIDATION_ERROR,
                 "请求参数校验失败",
                 request_id=_request_id(request),
-                details={"errors": exc.errors()[:10]},
+                details={"errors": errors},
             ),
         )
 

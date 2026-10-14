@@ -127,28 +127,26 @@ def _submit(env, tid: str, action: str, feedback: str = "") -> None:
     env["repo"].create_review(tid, action, feedback)
 
 
-# ===== 1) 开关 off：新任务 = 串行语义（历史行为）=====
+# ===== 1) Retired serial flag cannot change parallel topology =====
 
 
-async def test_flag_off_new_task_is_serial(env, monkeypatch):
-    monkeypatch.delenv(SEED_LITE_ENV, raising=False)
+async def test_flag_off_still_creates_parallel_task(env, monkeypatch):
+    """The retired feature flag cannot choose a serial topology anymore."""
+    monkeypatch.setenv(SEED_LITE_ENV, "off")
     tid = _new_task(env)
 
     await _drive_to_waiting(env, tid)
     values = await _checkpoint(env, tid)
-    assert not values.get("research_generation"), "串行 lineage 不得写 generation 标记"
-    assert not values.get("speculative_research")
-    assert not values.get("notes"), "串行模式下研究尚未开始（在 approve 之后才跑）"
-    msgs = values.get("supervisor_messages") or []
-    assert any("Here is the draft report" in getattr(m, "content", "") for m in msgs), \
-        "串行草案必须照常写入 supervisor_messages"
+    assert values.get("research_generation") == 1
+    payload = values.get("speculative_research") or {}
+    assert payload.get("generation") == 1 and payload.get("notes")
+    assert not values.get("notes")
 
     _submit(env, tid, "approve")
     outcome = await _runner(env).run(tid)
     assert outcome.status == TaskStatus.COMPLETED.value, outcome
     values = await _checkpoint(env, tid)
-    assert values.get("notes"), "approve 后研究结果进入 notes"
-    assert not values.get("research_generation")
+    assert list(values.get("notes") or []) == list(payload["notes"])
     assert values.get("final_report")
 
 
@@ -263,20 +261,21 @@ async def test_flag_flip_speculative_lineage_resumes_with_marker_topology(env, m
     assert values.get("final_report")
 
 
-async def test_flag_flip_serial_lineage_resumes_serially(env, monkeypatch):
-    """反向：串行 lineage 在开关翻为 on 后恢复，语义不得漂移。"""
-    monkeypatch.delenv(SEED_LITE_ENV, raising=False)
-    tid = _new_task(env)
+async def test_serial_checkpoint_rejected_before_graph_construction(env):
+    """Never reinterpret an old serial checkpoint using the new parallel DAG."""
+    from deep_research.research_seed import ResearchFenceError
+    from types import SimpleNamespace
 
-    await _drive_to_waiting(env, tid)
-    monkeypatch.setenv(SEED_LITE_ENV, "on")
+    class LegacySaver:
+        async def aget_tuple(self, _config):
+            return SimpleNamespace(checkpoint={"channel_values": {
+                "research_generation": 0,
+                "research_brief": "old serial brief",
+            }})
 
-    _submit(env, tid, "approve")
-    outcome = await _runner(env).run(tid)
-    assert outcome.status == TaskStatus.COMPLETED.value, outcome
-    values = await _checkpoint(env, tid)
-    assert not values.get("research_generation"), "串行 lineage 不得被升级成投机"
-    assert values.get("notes"), "串行研究结果照常进入 notes"
+    runner = _runner(env, LegacySaver())
+    with pytest.raises(ResearchFenceError, match="serial or invalid checkpoint"):
+        await runner._lineage_is_speculative({"configurable": {"thread_id": "legacy"}})
 
 
 # ===== 5) worker 在 regenerate 中途死亡 → 新进程（新 checkpointer 实例）续跑 =====

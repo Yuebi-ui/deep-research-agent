@@ -144,6 +144,7 @@ def ensure_transition(current: TaskStatus, target: TaskStatus) -> None:
 
 STAGE_TO_STATUS: dict[str, TaskStatus] = {
     "human_review": TaskStatus.WAITING_REVIEW,
+    "human_review_v2": TaskStatus.WAITING_REVIEW,
     "final_report_generation": TaskStatus.COMPLETED,
 }
 

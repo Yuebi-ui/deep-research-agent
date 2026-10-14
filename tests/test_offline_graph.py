@@ -93,6 +93,7 @@ def test_full_graph_visits_each_node_once():
         "write_research_brief",
         "write_draft_report",
         "supervisor_subgraph",
+        "accept_research",
         "claim_verification",
         "final_report_generation",
     ], f"节点顺序不符: {order}"
@@ -110,6 +111,7 @@ def test_supervisor_subgraph_terminates_via_red_team():
     init = {
         "supervisor_messages": [HumanMessage(content="Research: compare A and B")],
         "research_brief": "compare A and B",
+        "research_generation": 1,
         "research_iterations": 0,
         "notes": [],
         "raw_notes": [],

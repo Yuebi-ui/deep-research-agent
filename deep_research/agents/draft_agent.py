@@ -22,7 +22,6 @@ from langgraph.types import Command
 from deep_research import logging as dr_logging
 from deep_research.llm import draft_thinking, get_chat_model
 from deep_research.prompts import RESEARCH_BRIEF_PROMPT, DRAFT_REPORT_PROMPT
-from deep_research.research_seed import speculative_lineage
 from deep_research.states import AgentState, AgentInputState
 from deep_research.utils import get_today_str
 
@@ -88,14 +87,8 @@ def write_draft_report(state: AgentState) -> Command[Literal["__end__"]]:
     update = {
         "draft_report": draft_report,
     }
-    # Phase 5A/5B：投机 lineage 下 research 分支与 draft 并行，supervisor 的首轮
-    # 上下文由 write_research_brief 内产出的 research_seed 提供 —— 两个分支同时写
-    # supervisor_messages 会被 add_messages 合并成"草稿+种子"两条，因此这里让位。
-    # 判定依据是 **lineage 标记**（research_generation >= 1，由 brief 在投机起点写入），
-    # 而不是 env 开关 —— 保证在途 lineage 在 restart/回滚后语义不变。
-    # 串行 lineage（缺省 0）：行为与历史逐字一致。
-    if not speculative_lineage(state):
-        update["supervisor_messages"] = ["Here is the draft report: " + draft_report, research_brief]
+    # The seed is already in supervisor_messages. Draft must not write the
+    # same LastValue channel as its parallel Supervisor branch.
     return update
 
 

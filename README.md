@@ -1,3 +1,4 @@
+
 # Deep Research Agent
 
 
@@ -49,25 +50,40 @@ flowchart LR
 - [代码地图](architecture/CODE_MAP.md)
 - [设计决策](docs/DESIGN_DECISIONS.md)
 
-## 研究流程
+## 研究流程（V3）
 
-实际图拓扑会受到 feature flag 影响，核心流程如下：
+**新任务只有并行主图，串行模式已删除。** 对于推荐配置 `DR_QUALITY_GATE_V2=on`，两条分支汇合后再进行质量审查、有限轮次补研和人工审核：
 
 ```mermaid
-flowchart LR
+flowchart TD
     Q[User Query] --> B[Research Brief]
-    B --> D[Draft]
-    B --> S[Supervisor + Researchers]
-    D --> H{Human Review}
-    S --> H
-    H -->|approve| V[Claim Verification]
-    H -->|revise| R[Regenerate Research]
-    R --> H
+    B --> D[Draft Agent]
+    B --> S[Supervisor and Researchers]
+    D --> J[Parallel AND-join]
+    S --> J
+    J --> E[Evaluator: evidence readiness]
+    E --> R[Red Team: adversarial review]
+    R --> G{Quality decision}
+    G -->|Actionable gap and budget| T[Targeted Research]
+    T --> E
+    G -->|Enough evidence / safe stop| H{HITL review}
+    H -->|approve| A[Accept generation-fenced Findings]
+    H -->|revise_draft| U[Rewrite draft only]
+    U --> E
+    H -->|more_research| T
+    A --> V[Claim Verification]
     V --> W[Final Writer]
     W --> F[Final Report]
 ```
 
-历史记忆只作为研究线索使用。它可以影响规划、检索词和研究方向，但不会直接替代当前任务的搜索证据与 Claim Verification。
+- **Evaluator / Red Team**：按候选 Draft、Research Findings 和 Brief 检查覆盖度、证据缺口、矛盾及审查意见；不直接评价 Final Report。
+- **自动补研**：根据可执行的缺失主题定向调用 Researcher，重新审查；默认最多两轮自动补研。研究结果先留在 generation 隔离区，HITL 批准后才进入正式 `notes`。
+- **HITL**：可以批准、只修改 Draft 或明确要求补充研究；修改写作内容不必无条件重跑原始研究。
+- **Final Writer**：综合已批准的 Findings 与 Draft 生成终稿。当前 Claim Verification 主要在 Final Writer **之前**运行，不能声称终稿已经过完整事实核验。
+
+`DR_QUALITY_GATE_V2=off` 仍有并行 V0/V1 兼容路径，但**不会恢复串行执行**。旧 V0/V1/V2 的既有任务按 Checkpoint 版本处理，旧串行任务需要在旧版完成或单独迁移。详见 [V3 设计说明](docs/PARALLEL_ONLY_V3.md)。
+
+历史记忆只能用于规划和研究线索，不能代替本轮证据与事实核查。
 
 ## Memory 3.0
 
@@ -268,6 +284,8 @@ curl -X POST http://127.0.0.1:8000/api/research/start \
 ```
 
 ## 评测与消融 (Benchmark / Ablation)
+
+> **版本范围提示**：以下表格为原版项目保存的历史实验及原有说明，数值未因 V3 调整；它们**不是对 V3 并行 / 自我纠错机制的重新测量**。`results/live/v1/` 中的汇总也包含 `README_REPORTED_REAL_RUNTIME` 类型记录，其原始单次运行数据是否齐全应以具体 manifest 为准。V3 主流程验证状态参见 [V3 验证记录](docs/V3_VALIDATION_STATUS.md)。
 
 > **证据分层**：本仓库区分 `MEASURED_OFFLINE_FIXTURE`（在虚构语料上真实计算的离线成绩）与`REAL_RUNTIME`（真实 Agent / Chroma 的运行记录）。
 

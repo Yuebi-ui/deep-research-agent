@@ -93,3 +93,22 @@ async def red_team_node(state: SupervisorState) -> Command:
             ]
         }
     )
+
+
+async def review_research_bundle(
+    research_brief: str, draft_report: str, research_notes: str
+) -> str:
+    """Main-graph adversarial reviewer over the joined draft/evidence bundle.
+
+    Unlike ``red_team_node``, returns feedback as data: HITL makes the
+    final decision in V1. The automated repair loop is deliberately V2.
+    """
+    from deep_research.prompts.research_quality import RESEARCH_RED_TEAM_PROMPT
+
+    prompt = RESEARCH_RED_TEAM_PROMPT.format(
+        research_brief=research_brief,
+        draft_report=draft_report,
+        research_notes=research_notes,
+    )
+    response = await red_team_model.ainvoke([HumanMessage(content=prompt)])
+    return str(response.content or "").strip()

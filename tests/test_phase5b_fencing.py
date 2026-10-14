@@ -3,7 +3,7 @@
 口径：
 
 - lineage 判定（`research_generation >= 1`）只看 checkpoint 状态事实；
-- 投机 lineage 的研究收尾必须写隔离字段 `speculative_research`（串行写 `notes`）；
+- 投机 lineage 的研究收尾必须写隔离字段 `speculative_research`（不再支持串行直写 `notes`）；
 - ACCEPT 时只有 `payload.generation == active_generation` 才允许并入 `notes`，
   否则抛 `ResearchFenceError`（显式失败，绝不静默降级）；
 - retry 分类里 fence 错误是**不可重试**的领域错误。
@@ -64,11 +64,10 @@ def test_speculative_payload_is_fingerprinted_and_generation_tagged():
     assert p["notes"] == ["x"]
 
 
-def test_quarantine_serial_lineage_writes_notes_verbatim():
+def test_quarantine_rejects_legacy_serial_state():
     state = {"research_brief": _BRIEF}
-    out = quarantine_update(state, ["n1", "n2"])
-    assert out == {"notes": ["n1", "n2"]}, "串行 lineage 行为必须与历史逐字一致"
-    assert "speculative_research" not in out
+    with pytest.raises(ResearchFenceError, match="generation >= 1"):
+        quarantine_update(state, ["n1", "n2"])
 
 
 def test_quarantine_speculative_lineage_isolates_result():

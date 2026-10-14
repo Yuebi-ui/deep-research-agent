@@ -54,6 +54,11 @@ _NODE_LABELS = {
     "tool_node": "工具调用",
     "compress_research": "研究结果压缩",
     "red_team": "Red Team 对抗审查",
+    "evaluate_research": "研究证据质量评估",
+    "red_team_audit": "研究证据对抗审查",
+    "route_quality_gate": "研究质量反馈决策",
+    "targeted_research": "定向补充研究",
+    "quality_gate_failed": "未获人工批准的质量阻断",
     "claim_verification": "事实核查",
     "regenerate_research": "研究再生成",
     "accept_research": "研究采纳",
@@ -88,9 +93,12 @@ def build_input(query: str) -> dict[str, Any]:
 
 
 def build_resume_command(action: str, feedback: str = "") -> Command:
-    if action == "revise":
-        return Command(resume={"action": "revise", "feedback": feedback})
-    return Command(resume={"action": "approve"})
+    if action in ("revise", "revise_draft", "more_research"):
+        return Command(resume={"action": action, "feedback": feedback})
+    if action == "approve":
+        return Command(resume={"action": "approve"})
+    # Never accidentally turn a rejected/unknown decision into approval.
+    raise ValueError(f"Unsupported HITL review action: {action!r}")
 
 
 class TaskRunner:
@@ -262,45 +270,58 @@ class TaskRunner:
     # ------------------------------------------------------------------
 
     async def _lineage_is_speculative(self, config: dict[str, Any]) -> bool | None:
-        """checkpoint 里的 lineage 标记（Phase 5B）。
+        """Reject old serial checkpoints before constructing the parallel graph.
 
-        返回值语义：
-
-        - `None` —— **未绑定或不存在**：新任务（无 checkpoint），或崩溃发生在
-          write_research_brief 提交之前（标记尚未写入）。两种情况下 lineage 都
-          还没决定 → 拓扑按 env 开关（`DR_SEED_LITE_SPECULATIVE`），即将重跑的
-          brief 节点会读**同一个 env** 写下一致的标记（自洽）。
-        - `True/False` —— 标记已提交（brief 总是原子写 0 或 1）：resume **必须**
-          用与该 lineage 一致的拓扑，开关中途翻转（回滚）不得改变在途任务语义。
-
-        为什么必须读 checkpoint 而不是只看 env：开关决定"新 lineage 怎么起步"，
-        已存在的 lineage 必须保持自己的语义 —— 否则开关翻转时 resume 会用错拓扑
-        （例如投机 lineage 在串行拓扑下 approve 会跳过 HITL 直接写 notes == 语义
-        破坏；串行 lineage 在投机拓扑下会等一个永远不会到来的 join == 卡死）。
+        A checkpoint before Brief commit has no generation; it is safe to run
+        as parallel if no Brief or Draft artifacts are present. A checkpoint
+        containing generation=0 or old completed Brief/Draft is not safe to
+        reinterpret: it must be drained on the previous V2 release.
         """
+        from deep_research.research_seed import ResearchFenceError
+
         tup = await self._checkpointer.aget_tuple(config)
         if tup is None:
             return None
         values = (tup.checkpoint or {}).get("channel_values") or {}
         if "research_generation" not in values:
+            if any(values.get(k) for k in (
+                "research_brief", "draft_report", "speculative_research",
+            )):
+                raise ResearchFenceError(
+                    "legacy checkpoint without research generation; resume with V2 first"
+                )
             return None
-        try:
-            return int(values.get("research_generation") or 0) >= 1
-        except (TypeError, ValueError):
-            # 标记值无法解析 = 状态被污染；显式失败（不静默降级到 env）
-            raise RuntimeError(
-                f"checkpoint lineage marker 非法: research_generation={values.get('research_generation')!r}"
+        raw = values["research_generation"]
+        if type(raw) is not int or raw < 1:
+            raise ResearchFenceError(
+                f"serial or invalid checkpoint generation {raw!r}; resume with V2 first"
             )
+        return True
+
+    async def _quality_gate_from_checkpoint(self, config: dict[str, Any]) -> int | None:
+        """None=new lineage (use flags); existing checkpoints lock V0/V1/V2."""
+        tup = await self._checkpointer.aget_tuple(config)
+        if tup is None:
+            return None
+        values = (tup.checkpoint or {}).get("channel_values") or {}
+        if "research_generation" not in values:
+            return None  # brief not committed; same semantics as speculative flag
+        version = values.get("quality_gate_version", 0)
+        if type(version) is not int or version not in (0, 1, 2):
+            raise RuntimeError(f"invalid quality_gate_version in checkpoint: {version!r}")
+        return version
 
     async def _execute(self, thread_id: str, task: Any) -> RunOutcome:
         from deep_research.agent_builder import _create_builder
 
         config: dict[str, Any] = {"configurable": {"thread_id": thread_id}, "recursion_limit": 50}
-        # Phase 5B：resume 的拓扑由 checkpoint 的 lineage 决定；新任务沿用 env 开关。
-        speculative = await self._lineage_is_speculative(config)
-        graph = _create_builder(with_hitl=True, speculative=speculative).compile(
-            checkpointer=self._checkpointer
-        )
+        # Only the parallel topology is supported. Reject legacy serial
+        # checkpoints before graph construction so no resume can misroute.
+        await self._lineage_is_speculative(config)
+        quality_gate = await self._quality_gate_from_checkpoint(config)
+        graph = _create_builder(
+            with_hitl=True, quality_gate_version=quality_gate,
+        ).compile(checkpointer=self._checkpointer)
         if self._collector is not None:
             # baseline 观测接线：callback 只观察，不改变 graph 行为
             config["callbacks"] = [self._collector]
@@ -325,7 +346,10 @@ class TaskRunner:
             if review is None:
                 # 到达审查点但用户还没决定 —— 正常等待，不是错误
                 return await self._finish_waiting_review(thread_id, snapshot)
-            user_input = build_resume_command(review.action, review.feedback)
+            try:
+                user_input = build_resume_command(review.action, review.feedback)
+            except ValueError as exc:
+                return await self._finish_failed(thread_id, exc)
             self._repo.mark_review_consumed(review.id, self._worker_id)
             await ev.publish(
                 self._redis, thread_id, EventType.TASK_RESUMED,
@@ -694,18 +718,50 @@ class TaskRunner:
 
         values = snapshot.values or {}
         draft = values.get("draft_report", "") or ""
+        candidate_previews: list[str] = []
+        candidate_notes: list[str] = []
+        if values.get("quality_gate_version") in (1, 2):
+            from deep_research.quality_gate import checked_candidate_notes
+
+            candidate_notes = checked_candidate_notes(values)
+            candidate_previews = [note[:400] for note in candidate_notes[:3]]
 
         task = self._repo.get(thread_id)
         if task is not None:
             task.status = TaskStatus.WAITING_REVIEW.value
-            task.stage = "human_review"
+            # Distinguish V2 in the task projection so the stateless API can
+            # reject V2-only review actions before queuing a resume attempt.
+            task.stage = ("human_review_v2" if values.get("quality_gate_version") == 2
+                          else "human_review")
             task.draft_report = draft
             task.updated_at = datetime.now()
             self._repo.save(task)
 
         await ev.publish(
             self._redis, thread_id, EventType.TASK_WAITING_REVIEW,
-            {"draft_preview": draft[:2000]}, worker_id=self._worker_id,
+            {
+                "draft_preview": draft[:2000],
+                "quality_review": values.get("quality_review"),
+                "red_team_review": values.get("red_team_review"),
+                "quality_gate_decision": values.get("quality_gate_decision")
+                    if values.get("quality_gate_version") == 2 else None,
+                "quality_repair_history": values.get("quality_repair_history")
+                    if values.get("quality_gate_version") == 2 else [],
+                "auto_research_rounds": values.get("quality_repair_count")
+                    if values.get("quality_gate_version") == 2 else None,
+                "manual_research_rounds": values.get("manual_research_count")
+                    if values.get("quality_gate_version") == 2 else None,
+                "review_options": (
+                    ["approve", "revise_draft"] +
+                    (["more_research"] if values.get("manual_research_count", 0) <
+                      values.get("manual_research_limit", 2) else [])
+                ) if values.get("quality_gate_version") == 2 else ["approve", "revise"],
+                # Only metadata is broadcast here; candidate findings stay
+                # quarantined in checkpoint until HITL approval.
+                "candidate_notes_count": len(candidate_notes)
+                    if values.get("quality_gate_version") in (1, 2) else None,
+                "candidate_notes_preview": candidate_previews,
+            }, worker_id=self._worker_id,
             maxlen=self._settings.event_retention_maxlen,
         )
         return RunOutcome(TaskStatus.WAITING_REVIEW.value)

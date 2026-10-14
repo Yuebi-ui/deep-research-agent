@@ -197,7 +197,18 @@ def get_chat_model_auto(role: str, query_text: str = "", *, stage: str | None = 
     """根据 query 复杂度自动路由模型。短 query → qwen3-32b，长 query → qwen3-235b。"""
     model_role = _SIMPLE_MODEL_ROLE if len(query_text) < _ROUTING_COMPLEXITY_THRESHOLD else _COMPLEX_MODEL_ROLE
     logger.info("Smart routing: role '%s' (query_len=%d) → model_role '%s'", role, len(query_text), model_role)
-    return get_chat_model(model_role, stage=stage, max_tokens=max_tokens)
+    model = get_chat_model(model_role, stage=stage, max_tokens=max_tokens)
+    from deep_research.settings import get_engine_settings
+
+    if role == "draft" and get_engine_settings().use_fake_llm:
+        # In offline tests the planning/draft task must use its own fake
+        # responder. A judge override must not intercept brief generation
+        # merely because the live router selects the evaluator-sized model.
+        from deep_research.testing.fake_llm import FakeChatModel
+
+        if isinstance(model, FakeChatModel):
+            return model.model_copy(update={"role": "draft"})
+    return model
 
 
 def get_chat_model(
