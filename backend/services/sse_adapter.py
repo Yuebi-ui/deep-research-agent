@@ -24,6 +24,8 @@ _NODE_LABELS = {
     "tool_node": "工具调用",
     "compress_research": "研究结果压缩",
     "red_team": "Red Team 对抗审查",
+    "evaluate_research": "研究证据质量评估",
+    "red_team_audit": "研究证据对抗审查",
     "claim_verification": "事实核查",
 }
 

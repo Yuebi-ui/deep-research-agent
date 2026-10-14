@@ -8,3 +8,10 @@
 - [公开评测结果](../results/README.md)
 
 公开文档聚焦当前代码的接口、架构和可核对的汇总；历史阶段报告、大量原始日志与个人更新清单不属于 GitHub 仓库交付内容。
+
+## V3 面试展示资料
+
+- [V3 主图与版本迁移](PARALLEL_ONLY_V3.md)
+- [V3 验证状态与未完成集成测试](V3_VALIDATION_STATUS.md)
+- [原版实验和测试的冻结方法](HISTORICAL_BASELINE.md)
+- [面试讲解提纲](INTERVIEW_GUIDE_V3.md)

@@ -2,8 +2,7 @@
 
 覆盖：
 - seed 是 brief 的**确定性投影**（无 LLM、可 fingerprint、明显小于 draft）；
-- 开关解析：Phase 5B 定版后**默认 on**（生产默认 = 投机拓扑），显式 off
-  回滚为串行语义且生产 wiring 一字不改；
+- Parallel-only V3 ignores the historical on/off switch; serial fallback is gone;
 - 投机模式下**真图离线跑通**（fake 模型）：fan-out 并行、join 正确、
   supervisor 拿到的是 seed 而不是 draft。
 
@@ -82,19 +81,16 @@ def test_flag_defaults_on(monkeypatch):
     assert seed_lite_speculative_enabled() is True
 
 
-def test_flag_explicit_off_rolls_back(monkeypatch):
-    """回归 = 显式 off（无需改代码/迁移状态）。"""
+def test_flag_explicit_off_is_ignored(monkeypatch):
+    """Parallel-only V3 cannot restore serial routing through a stale flag."""
     monkeypatch.setenv(SEED_LITE_ENV, "off")
-    assert seed_lite_speculative_enabled() is False
+    assert seed_lite_speculative_enabled() is True
 
 
-@pytest.mark.parametrize("value,expected", [
-    ("on", True), ("1", True), ("true", True), ("YES", True),
-    ("off", False), ("0", False), ("", False), ("whatever", False),
-])
-def test_flag_parsing(monkeypatch, value, expected):
+@pytest.mark.parametrize("value", ["on", "1", "true", "YES", "off", "0", "", "whatever"])
+def test_obsolete_flag_is_always_parallel(monkeypatch, value):
     monkeypatch.setenv(SEED_LITE_ENV, value)
-    assert seed_lite_speculative_enabled() is expected
+    assert seed_lite_speculative_enabled() is True
 
 
 # ===== wiring =====
@@ -132,12 +128,12 @@ def test_speculative_topology_fans_out_and_joins(monkeypatch):
     assert ("supervisor_subgraph", "claim_verification") not in edges
 
 
-def test_default_topology_unchanged(monkeypatch):
+def test_stale_flag_off_cannot_restore_serial_graph(monkeypatch):
     nodes, edges = _topology(monkeypatch, speculative=False)
     assert "build_research_seed" not in nodes
-    assert ("write_draft_report", "supervisor_subgraph") in edges
-    assert ("write_draft_report", "claim_verification") not in edges
-    assert ("write_research_brief", "supervisor_subgraph") not in edges
+    assert ("write_draft_report", "supervisor_subgraph") not in edges
+    assert ("write_research_brief", "supervisor_subgraph") in edges
+    assert ("write_research_brief", "write_draft_report") in edges
 
 
 # ===== 真图离线端到端（fake 模型）=====

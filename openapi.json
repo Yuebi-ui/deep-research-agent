@@ -1,0 +1,1080 @@
+{
+  "components": {
+    "schemas": {
+      "AlertsResponse": {
+        "description": "告警概览。\n\n阈值可配置、维度可扩展，因此 `alerts` 内部保留开放结构\n—— 属 §7.3 允许的「字段本质上就是开放 JSON metadata」。",
+        "properties": {
+          "alerts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "alerts_count": {
+            "default": 0,
+            "title": "Alerts Count",
+            "type": "integer"
+          },
+          "thresholds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Thresholds",
+            "type": "object"
+          }
+        },
+        "title": "AlertsResponse",
+        "type": "object"
+      },
+      "CancelResponse": {
+        "properties": {
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "status"
+        ],
+        "title": "CancelResponse",
+        "type": "object"
+      },
+      "CostByModel": {
+        "additionalProperties": true,
+        "properties": {
+          "calls": {
+            "default": 0,
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_rmb": {
+            "default": 0.0,
+            "title": "Cost Rmb",
+            "type": "number"
+          },
+          "input_tokens": {
+            "default": 0,
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "default": 0,
+            "title": "Output Tokens",
+            "type": "integer"
+          }
+        },
+        "title": "CostByModel",
+        "type": "object"
+      },
+      "CostDetailResponse": {
+        "additionalProperties": true,
+        "description": "单任务成本明细。\n\n字段与前端 `CostDashboard.tsx` 消费的保持一致。\n`model_stats` 以模型名为键、`records` 为原始记录列表，二者都是\n开放结构。",
+        "properties": {
+          "model_stats": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CostByModel"
+            },
+            "title": "Model Stats",
+            "type": "object"
+          },
+          "records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "total_cost_rmb": {
+            "default": 0.0,
+            "title": "Total Cost Rmb",
+            "type": "number"
+          },
+          "total_input_tokens": {
+            "default": 0,
+            "title": "Total Input Tokens",
+            "type": "integer"
+          },
+          "total_output_tokens": {
+            "default": 0,
+            "title": "Total Output Tokens",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "default": 0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
+        "title": "CostDetailResponse",
+        "type": "object"
+      },
+      "DeleteResponse": {
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "title": "DeleteResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Components",
+            "type": "object"
+          },
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ReportResponse": {
+        "properties": {
+          "draft_report": {
+            "default": "",
+            "title": "Draft Report",
+            "type": "string"
+          },
+          "final_report": {
+            "default": "",
+            "description": "最终报告正文",
+            "title": "Final Report",
+            "type": "string"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
+        "title": "ReportResponse",
+        "type": "object"
+      },
+      "ResearchRequest": {
+        "description": "提交研究任务的请求。",
+        "properties": {
+          "query": {
+            "description": "研究主题/问题",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_.-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "baseline 观测 run 标识（可选）",
+            "title": "Run Id"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ResearchRequest",
+        "type": "object"
+      },
+      "ReviewAction": {
+        "description": "Human Review 审查决定。",
+        "properties": {
+          "action": {
+            "description": "审查动作；V2 支持结构调整 revise_draft 与定向补研 more_research",
+            "pattern": "^(approve|revise|revise_draft|more_research)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "feedback": {
+            "default": "",
+            "description": "修改草稿或定向补研的具体要求；V2 专用动作限 500 字",
+            "title": "Feedback",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ReviewAction",
+        "type": "object"
+      },
+      "ReviewResponse": {
+        "properties": {
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id"
+        ],
+        "title": "ReviewResponse",
+        "type": "object"
+      },
+      "StatsResponse": {
+        "additionalProperties": true,
+        "description": "全局统计摘要。",
+        "properties": {
+          "quality_stats": {
+            "additionalProperties": true,
+            "title": "Quality Stats",
+            "type": "object"
+          },
+          "total_cost_rmb": {
+            "default": 0.0,
+            "title": "Total Cost Rmb",
+            "type": "number"
+          },
+          "total_input_tokens": {
+            "default": 0,
+            "title": "Total Input Tokens",
+            "type": "integer"
+          },
+          "total_llm_calls": {
+            "default": 0,
+            "title": "Total Llm Calls",
+            "type": "integer"
+          },
+          "total_output_tokens": {
+            "default": 0,
+            "title": "Total Output Tokens",
+            "type": "integer"
+          },
+          "total_tasks": {
+            "default": 0,
+            "title": "Total Tasks",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "default": 0,
+            "title": "Total Tokens",
+            "type": "integer"
+          },
+          "total_trace_events": {
+            "default": 0,
+            "title": "Total Trace Events",
+            "type": "integer"
+          }
+        },
+        "title": "StatsResponse",
+        "type": "object"
+      },
+      "TaskCreatedResponse": {
+        "description": "POST /api/research/start 的响应。",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "status",
+          "created_at"
+        ],
+        "title": "TaskCreatedResponse",
+        "type": "object"
+      },
+      "TaskListItem": {
+        "description": "历史任务列表项。",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "query",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TaskListItem",
+        "type": "object"
+      },
+      "TaskSummaryResponse": {
+        "description": "任务状态快照。\n\n字段与改造前的 `agent_service.get_task_status()` 输出一致，\n另加 Phase G 引入的运行时元数据（attempt / cancel_requested）。",
+        "properties": {
+          "attempt": {
+            "default": 0,
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "cancel_requested": {
+            "default": false,
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "draft_report": {
+            "default": "",
+            "title": "Draft Report",
+            "type": "string"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "final_report": {
+            "default": "",
+            "title": "Final Report",
+            "type": "string"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "stage": {
+            "default": "",
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          }
+        },
+        "required": [
+          "thread_id",
+          "status"
+        ],
+        "title": "TaskSummaryResponse",
+        "type": "object"
+      },
+      "TraceGraphResponse": {
+        "additionalProperties": true,
+        "description": "执行轨迹图（nodes / edges）。\n\n图结构本身是开放的（节点类型会随 Agent 演进增加），因此节点与边\n声明为 ``extra=\"allow\"``：已知字段有类型，未知字段原样透传，\n不会因为加了 response_model 而把新字段悄悄过滤掉。",
+        "properties": {
+          "edges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "title": "TraceGraphResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "基于 LangGraph 的多智能体深度研究系统 API",
+    "title": "Agentic Deep Research Platform",
+    "version": "0.3.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/obs/alerts": {
+      "get": {
+        "description": "返回当前质量告警。",
+        "operationId": "get_alerts_api_obs_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Alerts",
+        "tags": [
+          "observability"
+        ]
+      }
+    },
+    "/api/obs/cost/{thread_id}": {
+      "get": {
+        "description": "返回指定任务的 Token 消耗和成本。",
+        "operationId": "get_cost_api_obs_cost__thread_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Cost",
+        "tags": [
+          "observability"
+        ]
+      }
+    },
+    "/api/obs/stats": {
+      "get": {
+        "description": "返回全局统计摘要 + 幻觉率趋势。",
+        "operationId": "get_stats_api_obs_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Stats",
+        "tags": [
+          "observability"
+        ]
+      }
+    },
+    "/api/obs/trace/{thread_id}": {
+      "get": {
+        "description": "返回指定任务的 Agent 执行轨迹（节点树 + 工具调用）。",
+        "operationId": "get_trace_api_obs_trace__thread_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceGraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Trace",
+        "tags": [
+          "observability"
+        ]
+      }
+    },
+    "/api/research/history/list": {
+      "get": {
+        "operationId": "get_history_api_research_history_list_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaskListItem"
+                  },
+                  "title": "Response Get History Api Research History List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get History",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/start": {
+      "post": {
+        "description": "创建任务并入队，**立即返回**，不等待研究完成。\n\n前端流程不变：拿到 thread_id 后再去订阅 /stream 获取进度。",
+        "operationId": "start_research_api_research_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}": {
+      "delete": {
+        "description": "软删除。",
+        "operationId": "delete_research_task_api_research__thread_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Research Task",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/cancel": {
+      "post": {
+        "description": "请求取消任务。\n\n语义是**协作式**的：`RUNNING` 任务只是置标志，worker 在下一个事件边界\n生效；**已经发出的 LLM / Search 调用无法安全抢占**（设计文档 §5.3）。\n未在执行的任务直接转入 CANCELLED。",
+        "operationId": "cancel_research_api_research__thread_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/events": {
+      "get": {
+        "description": "`/stream` 的别名（§14 允许的新路径），语义完全相同。",
+        "operationId": "task_events_api_research__thread_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Task Events",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/report": {
+      "get": {
+        "description": "读取最终报告。\n\n**直接读 DB**，不再经 graph 读 checkpoint state——数据库是业务事实源\n（设计文档 §16）。",
+        "operationId": "get_research_report_api_research__thread_id__report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Research Report",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/resume": {
+      "post": {
+        "description": "提交 HITL 审查决定。\n\n审查决定**落库**（不再用短 TTL 的 Redis 键或内存 dict）——否则 API 重启\n或 TTL 过期就会丢失，任务将永卡 WAITING_REVIEW（设计文档 §6）。\n\nAPI **不**驱动 graph resume；它只入队，由 worker 执行。",
+        "operationId": "resume_research_api_research__thread_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/status": {
+      "get": {
+        "operationId": "get_research_status_api_research__thread_id__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Research Status",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{thread_id}/stream": {
+      "get": {
+        "description": "SSE 事件投影。\n\n**只观察，不驱动**：读 Redis Stream + DB，不构建 LangGraph，\n不写任务状态。客户端断开只结束本次投影，不影响 worker。",
+        "operationId": "stream_research_api_research__thread_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/test-sse": {
+      "get": {
+        "description": "极简 SSE 测试——排除 FastAPI StreamingResponse 问题。",
+        "operationId": "test_sse_api_test_sse_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Test Sse"
+      }
+    }
+  }
+}

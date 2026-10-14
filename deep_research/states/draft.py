@@ -39,6 +39,16 @@ class AgentState(MessagesState):
     claim_verification_warning: str = ""                                    # 核查警告文本，注入到 final_report 生成 Prompt
     # ---- Phase 5B：投机研究 generation / fencing（缺省 0/None = 串行 lineage）----
     research_generation: int = 0                                            # active 研究代数（>=1 表示投机 lineage）
+    quality_gate_version: int = 0                                           # 0=legacy, 1=review only, 2=auto-research
+    quality_review: Optional[dict] = None                                  # independent evaluator verdict, latest generation
+    red_team_review: Optional[dict] = None                                 # independent red-team verdict, latest generation
+    quality_repair_count: int = 0                                           # V2 automatic research rounds consumed
+    quality_repair_limit: int = 2                                           # V2 checkpointed max automatic rounds
+    manual_research_count: int = 0                                          # V2 explicit human research requests
+    manual_research_limit: int = 2                                          # V2 checkpointed max human rounds
+    quality_repair_history: list[dict] = []                                 # V2 bounded provenance (replacement, not add)
+    quality_gate_decision: Optional[dict] = None                            # V2 latest deterministic routing decision
+    repair_request: Optional[dict] = None                                   # V2 targeted tasks (never authoritative findings)
     speculative_research: Optional[dict] = None
     # Episode candidates, never authoritative facts. Recorded after completion.
     research_trace: Annotated[list[dict], operator.add] = []

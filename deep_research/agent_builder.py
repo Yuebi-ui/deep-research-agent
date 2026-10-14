@@ -26,13 +26,28 @@ from deep_research.research_seed import (
     active_generation,
     build_research_seed,
     fenced_accept_update,
+    build_speculative_payload,
+    seed_fingerprint,
     render_seed_message,
-    seed_lite_speculative_enabled,
     seed_metrics,
-    speculative_lineage,
 )
 from deep_research.agents import supervisor_agent
 from deep_research.agents.draft_agent import write_draft_report
+from deep_research.agents.evaluator_agent import evaluate_research_readiness
+from deep_research.agents.red_team_agent import review_research_bundle
+from deep_research.quality_gate import (
+    QUALITY_GATE_VERSION,
+    checked_candidate_notes,
+    format_candidate_notes,
+    quality_gate_enabled,
+    quality_gate_lineage,
+    auto_research_lineage,
+    quality_gate_version_for_new_job,
+    initial_repair_limits,
+    choose_research_repair,
+    merge_candidate_notes,
+    format_followup_request,
+)
 from deep_research.memory.runtime import get_memory_manager
 from deep_research.memory.flags import memory_read_enabled, memory_write_enabled
 from deep_research.writer_context import build_final_report_prompt, unique_notes
@@ -88,7 +103,7 @@ def store_report_memory(user_query: str, report: str) -> Any:
 
 # ===== RESEARCH BRIEF (with Memory Injection) =====
 
-async def write_research_brief(state: AgentState) -> Command[str]:
+async def write_research_brief(state: AgentState) -> dict[str, Any]:
     """生成研究简报，同时注入历史记忆作为上下文参考。"""
 
     messages = state.get("messages", [])
@@ -121,38 +136,24 @@ async def write_research_brief(state: AgentState) -> Command[str]:
     response = await draft_model.ainvoke([HumanMessage(content=prompt)])
     research_brief = response.content
 
-    # Phase 5A/5B（DR_SEED_LITE_SPECULATIVE，**默认 on**，显式 off 回滚）：
-    # 投机模式下**在这个节点内**产出 research_seed 并写入 supervisor_messages，
-    # 然后返回普通 update（不用 Command(goto)）—— 这样静态 fan-out 边生效，
-    # draft 与 research 成为它的**直接后继**，落在同一个 superstep
-    # （唯一能真正并行的位置）。
-    #
-    # 踩过的坑：把 seed 放到独立节点（brief→seed→research）会让 research 落到下一个
-    # superstep；superstep 是屏障 → research 仍要等 draft 跑完（实测 overlap = 0.0s）。
-    #
-    # Phase 5B：此处是**唯一**读取 env 开关的地方（决定新 lineage 是否投机起步）；
-    # `research_generation=1` 是 lineage 标记，之后所有节点只看 checkpoint 里的事实。
-    if seed_lite_speculative_enabled():
-        seed = build_research_seed(research_brief)
-        metrics = seed_metrics(seed)
-        logger.info(
-            "research_seed built: fingerprint=%s chars=%d (phase5b speculative lineage start, generation=1)",
-            metrics["seed_fingerprint"], metrics["seed_message_chars"],
-        )
-        return {
-            "research_brief": research_brief,
-            "supervisor_messages": [render_seed_message(seed), research_brief],
-            "research_generation": 1,
-        }
-
-    # Phase 5B：串行 lineage 也要**显式**写下 research_generation=0 ——
-    # 标记必须与 brief 的决策原子提交，否则“崩溃发生在 brief 提交之前”的
-    # checkpoint 会处于未绑定状态（见 runner._lineage_is_speculative：
-    # 未绑定 → 按 env；绑定后 → 永久保持自己的语义）。
-    return Command(
-        goto="write_draft_report",
-        update={"research_brief": research_brief, "research_generation": 0}
+    # The production graph is parallel-only: the Brief seeds Supervisor and
+    # fans out to Draft and Research in the same LangGraph superstep.
+    seed = build_research_seed(research_brief)
+    metrics = seed_metrics(seed)
+    logger.info(
+        "parallel research seed built: fingerprint=%s chars=%d generation=1",
+        metrics["seed_fingerprint"], metrics["seed_message_chars"],
     )
+    return {
+        "research_brief": research_brief,
+        "supervisor_messages": [render_seed_message(seed), research_brief],
+        "research_generation": 1,
+        "quality_gate_version": quality_gate_version_for_new_job(),
+        **initial_repair_limits(),
+        "quality_repair_count": 0,
+        "manual_research_count": 0,
+        "quality_repair_history": [],
+    }
 
 
 # ===== HUMAN REVIEW (HITL) =====
@@ -162,67 +163,98 @@ async def human_review(state: AgentState) -> Command[str]:
 
     用户可以通过 resume 传入 {'action': 'approve'} 或 {'action': 'revise', 'feedback': '...'}
 
-    Phase 5B 语义（按 **lineage** 而非 env 开关判定）：
-
-    - 串行 lineage（research_generation 缺省 0）——历史行为逐字不变：
-      approve → supervisor_subgraph 开始研究；revise → 改写草稿回到本节点。
-    - 投机 lineage（research_generation >= 1）——研究已在并行分支跑完（隔离在
-      `speculative_research` 中）；approve 经 **fence 校验**后把当前 generation
-      的结果并入 `notes` 再进 claim_verification（stale 结果不一致会显式失败）；
-      revise → 改写草稿 → regenerate_research（推进 generation、用新种子重跑研究）
-      → 回到本节点再次审查。旧 generation 的投机结果被下一代覆盖，永不进入下游。
+    All supported lineages run research in parallel before HITL, with candidate
+    findings quarantined until approval. V2 also supports draft revisions and
+    explicit targeted research without re-running unrelated research.
     """
     draft = state.get("draft_report", "")
     research_brief = state.get("research_brief", "")
-    speculative = speculative_lineage(state)
+    quality_v1 = quality_gate_lineage(state)
+    quality_v2 = auto_research_lineage(state)
+    research_notes: list[str] = checked_candidate_notes(state) if quality_v1 else []
+    if quality_v1:
+        # Fail closed if a late/stale result overwrote the reviewed candidate.
+        # This is a preview ONLY; it does not admit evidence to ``notes``.
+        assessment = state.get("quality_review") or {}
+        red_review = state.get("red_team_review") or {}
+        preview = [note[:500] for note in research_notes[:3]]
+    else:
+        assessment, red_review, preview = {}, {}, []
+
+    if quality_v2:
+        manual_used = state.get("manual_research_count", 0)
+        manual_limit = state.get("manual_research_limit", 2)
+        options = ["approve", "revise_draft"]
+        if manual_used < manual_limit:
+            options.append("more_research")
+    else:
+        options = ["approve", "revise"]
 
     # 触发中断，等待人工输入
     review = interrupt({
-        "message": "报告草稿已生成，请审查",
+        "message": "研究成果已完成自动审核，请审查" if quality_v1 else "报告草稿已生成，请审查",
         "draft_report_preview": draft[:1000] + ("..." if len(draft) > 1000 else ""),
         "research_brief": research_brief[:500],
-        "options": ["approve", "revise"],
+        "options": options,
+        "gate_decision": state.get("quality_gate_decision") if quality_v2 else None,
+        "quality_repair_history": (state.get("quality_repair_history") or []) if quality_v2 else [],
+        "auto_research_rounds": state.get("quality_repair_count", 0) if quality_v2 else None,
+        "manual_research_rounds": state.get("manual_research_count", 0) if quality_v2 else None,
+        "manual_research_limit": state.get("manual_research_limit", 0) if quality_v2 else None,
+        "quality_review": assessment,
+        "red_team_review": red_review,
+        "research_notes_count": len(research_notes) if quality_v1 else None,
+        "research_notes_preview": preview,
         # 观测字段（不参与决策）：审查对象属于哪一代研究
         "research_generation": active_generation(state),
     })
 
-    action = review if isinstance(review, str) else review.get("action", "approve")
+    action = review if isinstance(review, str) else (review.get("action") if isinstance(review, dict) else None)
+    if action not in (("approve", "revise", "revise_draft", "more_research") if quality_v2
+                      else ("approve", "revise")):
+        raise ValueError(f"Unsupported HITL review action: {action!r}")
 
-    if action == "revise":
+    if action == "more_research":
+        feedback = str(review.get("feedback", "")).strip() if isinstance(review, dict) else ""
+        if not feedback or len(feedback) > 500:
+            raise ValueError("more_research requires feedback (1-500 characters)")
+        if state.get("manual_research_count", 0) >= state.get("manual_research_limit", 2):
+            # Stale clients can submit a button they saw before another round
+            # exhausted the budget. Never fail the entire task for this.
+            return Command(goto="human_review", update={
+                "quality_gate_decision": {
+                    "action": "human_review", "reason": "manual_budget_exhausted",
+                    "generation": active_generation(state),
+                },
+            })
+        return Command(goto="targeted_research", update={
+            "repair_request": {"source": "human", "from_generation": active_generation(state),
+                               "topics": [feedback]},
+        })
+
+    if action in ("revise", "revise_draft"):
         feedback = review.get("feedback", "") if isinstance(review, dict) else ""
         revision_prompt = f"请根据以下反馈修改报告草稿：\n{feedback}\n\n当前草稿：\n{draft}"
         response = await writer_model.ainvoke([HumanMessage(content=revision_prompt)])
-        if speculative:
-            # REJECT/REGENERATE：旧 generation 全部作废，研究必须重跑。
-            # 草稿改写走既有产品语义（writer 模型），随后 regenerate_research
-            # 推进 generation、重建确定性 seed 并重跑研究，再回到本节点审查。
-            logger.info(
-                "HITL: revised → invalidating research generation %d, regenerating",
-                active_generation(state),
-            )
-            return Command(
-                goto="regenerate_research",
-                update={"draft_report": response.content},
-            )
-        logger.info("HITL: report revised based on user feedback")
-        return Command(
-            goto="human_review",
-            update={"draft_report": response.content}
-        )
+        if quality_v2:
+            # Text/structure edit does not invalidate independently collected
+            # sources. Re-evaluate the same quarantined generation and return
+            # to HITL; no paid Researcher calls for mere copy edits.
+            return Command(goto="evaluate_research", update={"draft_report": response.content})
+        # Legacy V0/V1 parallel checkpoints retain the regenerate-on-revision path.
+        logger.info("HITL: revised generation %d; regenerating research", active_generation(state))
+        return Command(goto="regenerate_research", update={"draft_report": response.content})
     else:
-        if speculative:
-            # ACCEPT：fence 校验（payload.generation == active_generation）通过后，
-            # 当前 generation 的研究结果成为**唯一**进入下游的研究。
-            updates = fenced_accept_update(state)
-            logger.info(
-                "HITL: accepted research generation %d (%d notes admitted downstream)",
-                active_generation(state), len(updates["notes"]),
-            )
-            return Command(goto="claim_verification", update=updates)
-
-        # 串行模式：批准后**才开始**研究（research 排在 HITL 之后）。
-        logger.info("HITL: user approved draft, proceeding to %s", "supervisor_subgraph")
-        return Command(goto="supervisor_subgraph")
+        # The only successful path admits generation-fenced findings into notes.
+        # There is no serial approve -> Supervisor branch anymore.
+        if quality_v1:
+            checked_candidate_notes(state)
+        updates = fenced_accept_update(state)
+        logger.info(
+            "HITL: accepted parallel research generation %d (%d notes admitted)",
+            active_generation(state), len(updates["notes"]),
+        )
+        return Command(goto="claim_verification", update=updates)
 
 
 # ===== REGENERATE RESEARCH (Phase 5B, speculative only) =====
@@ -235,7 +267,7 @@ async def regenerate_research(state: AgentState, config: RunnableConfig) -> dict
     - 输入是**显式构造的干净 state**：新一代研究不继承上一代任何研究上下文
       （messages / iterations / quality_history / critiques 全部归零）；
     - 输出只回写 `research_generation` / `speculative_research`（以及研究途中
-      refine_draft_report 改写过的草稿，与串行语义对齐）；子图内部状态**不会**
+      refine_draft_report 改写过的草稿）；子图内部状态**不会**
       写回父图；
     - config 只继承观测侧（callbacks/metadata/tags），剥离 configurable ——
       子图不得触碰父图的 thread/checkpoint 配置；
@@ -262,10 +294,12 @@ async def regenerate_research(state: AgentState, config: RunnableConfig) -> dict
         "active_critiques": [],
         "research_trace": [],
         "supervisor_memory_hint": "",
-        # 修订后的草稿：与串行模式一致，研究过程中的 refine_draft_report
+        # Preserve the revised draft for legacy V0/V1 parallel resume paths.
+        # The inner refine_draft_report can still
         # 可以读取/改写它（实测触发率极低，但保持该路径可达）。
         "draft_report": draft,
         "research_generation": gen,
+        "quality_gate_version": state.get("quality_gate_version", 0),
     }
     child_config: dict[str, Any] = {k: v for k, v in (config or {}).items() if k != "configurable"}
     child_config.setdefault("recursion_limit", 50)
@@ -282,7 +316,12 @@ async def regenerate_research(state: AgentState, config: RunnableConfig) -> dict
             f"(got {payload!r})"
         )
 
-    updates: dict[str, Any] = {"research_generation": gen, "speculative_research": payload}
+    updates: dict[str, Any] = {
+        "research_generation": gen,
+        "speculative_research": payload,
+        "quality_review": None,  # clear assessments from previous generation
+        "red_team_review": None,
+    }
     if result.get("research_trace"):
         updates["research_trace"] = result["research_trace"]
     refined = result.get("draft_report") or ""
@@ -308,12 +347,198 @@ async def accept_research(state: AgentState) -> dict:
     构建（with_hitl=False + 投机）。语义与 human_review 的 ACCEPT 分支一致：
     只有 generation 匹配的结果可以进入下游，否则显式失败。
     """
+    if quality_gate_lineage(state):
+        checked_candidate_notes(state)
     updates = fenced_accept_update(state)
     logger.info(
         "auto-accept: research generation %d admitted downstream (%d notes)",
         active_generation(state), len(updates["notes"]),
     )
     return updates
+
+
+# ===== PHASE 1: INDEPENDENT QUALITY GATE (speculative lineage only) =====
+
+async def evaluate_research(state: AgentState) -> dict:
+    """Read fenced candidate findings, grade readiness, never rewrite Draft.
+
+    Low scores are shown to HITL; auto-research based on them is Phase 2.
+    A judge outage is visible as an error rather than silently marked PASS.
+    """
+    notes = checked_candidate_notes(state)  # fence failure must propagate
+    generation = active_generation(state)
+    try:
+        evaluation = await evaluate_research_readiness(
+            research_brief=(state.get("research_brief", "") or "")[:12000],
+            draft_report=(state.get("draft_report", "") or "")[:16000],
+            research_notes=format_candidate_notes(notes),
+        )
+        scores = (
+            evaluation.comprehensiveness_score,
+            evaluation.accuracy_score,
+            evaluation.coherence_score,
+        )
+        import math
+
+        if any(not math.isfinite(v) or not (0 <= v <= 10) for v in scores):
+            raise ValueError(f"invalid evaluator scores: {scores!r}")
+        assessment = {
+            "status": "completed",
+            "generation": generation,
+            "notes_count": len(notes),
+            "comprehensiveness_score": scores[0],
+            "accuracy_score": scores[1],
+            "coherence_score": scores[2],
+            "overall_score": round(sum(scores) / len(scores), 2),
+            "reason": evaluation.reason,
+            "missing_aspects": evaluation.missing_aspects,
+            "need_more_research": evaluation.need_more_research,
+        }
+    except Exception as exc:  # judge outage must remain visible to human reviewer
+        logger.warning("Quality Gate V1 evaluator unavailable: %s", exc)
+        assessment = {
+            "status": "error", "generation": generation,
+            "notes_count": len(notes), "error": str(exc)[:240],
+            "need_more_research": None,
+        }
+    return {"quality_review": assessment}
+
+
+async def red_team_review(state: AgentState) -> dict:
+    """Adversarial evidence review before HITL; no hidden auto-repair in V1."""
+    notes = checked_candidate_notes(state)
+    generation = active_generation(state)
+    try:
+        feedback = await review_research_bundle(
+            research_brief=(state.get("research_brief", "") or "")[:12000],
+            draft_report=(state.get("draft_report", "") or "")[:16000],
+            research_notes=format_candidate_notes(notes),
+        )
+        if auto_research_lineage(state) and not feedback.strip():
+            raise ValueError("Red Team returned an empty verdict")
+        passed = feedback.strip().upper() == "PASS"
+        review = {
+            "status": "completed", "generation": generation,
+            "notes_count": len(notes), "passed": passed,
+            "feedback": "PASS" if passed else (feedback[:2400] or "Red Team 未返回明确结论"),
+        }
+    except Exception as exc:
+        logger.warning("Quality Gate V1 red team unavailable: %s", exc)
+        review = {
+            "status": "error", "generation": generation,
+            "notes_count": len(notes), "passed": None, "error": str(exc)[:240],
+        }
+    return {"red_team_review": review}
+
+
+# ===== PHASE 2: BOUNDED RESEARCH FEEDBACK LOOP (V2 lineage only) =====
+
+async def route_quality_gate(state: AgentState, *, with_hitl: bool = True) -> Command[str]:
+    """Decide whether additional evidence is worth another paid research round.
+
+    No static outgoing edges: Command owns exactly one route. The decision and
+    budgets are checkpointed; the judge cannot silently change cost limits.
+    """
+    checked_candidate_notes(state)
+    outcome = choose_research_repair(state)
+    if outcome["action"] == "targeted_research":
+        return Command(goto="targeted_research", update={
+            "quality_gate_decision": outcome,
+            "repair_request": {
+                "source": "auto", "from_generation": active_generation(state),
+                "topics": outcome["topics"],
+            },
+        })
+    if not with_hitl and outcome["reason"] != "no_gap":
+        # Model errors, exhausted budgets and unresolved evidence gaps require
+        # a HUMAN decision; no-HITL mode must not silently approve them.
+        return Command(goto="quality_gate_failed", update={"quality_gate_decision": outcome})
+    return Command(
+        goto="human_review" if with_hitl else "accept_research",
+        update={"quality_gate_decision": outcome, "repair_request": None},
+    )
+
+
+async def targeted_research(state: AgentState, config: RunnableConfig) -> dict:
+    """Run focused Supervisor+Researcher on missing evidence, not a full rewrite.
+
+    The old candidate is read through the generation/brief fence, the child
+    runs in fresh isolated state, and only *after successful completion* do we
+    atomically checkpoint a NEW generation containing old+new notes. ``notes``
+    is never written here; only HITL approval can commit it downstream.
+    """
+    if not auto_research_lineage(state):
+        raise ResearchFenceError("targeted research requires a V2 checkpoint")
+    previous = checked_candidate_notes(state)
+    request = state.get("repair_request")
+    gen = active_generation(state)
+    if not isinstance(request, dict) or request.get("from_generation") != gen:
+        raise ResearchFenceError("stale or missing supplemental research request")
+    source = request.get("source")
+    if source not in ("auto", "human"):
+        raise ResearchFenceError("supplemental request must come from an authorized reviewer")
+    topics = request.get("topics")
+    brief = state.get("research_brief", "") or ""
+    focus = format_followup_request(brief, topics, previous)
+    count_key = "quality_repair_count" if source == "auto" else "manual_research_count"
+    limit_key = "quality_repair_limit" if source == "auto" else "manual_research_limit"
+    count = state.get(count_key, 0)
+    limit = state.get(limit_key, 2)
+    max_limit = 3 if source == "auto" else 5
+    if type(count) is not int or type(limit) is not int or not 0 <= count < limit <= max_limit:
+        raise ResearchFenceError(f"{source} supplemental research budget exhausted or invalid")
+
+    next_gen = gen + 1
+    seed = build_research_seed(brief)
+    child_input = {
+        "supervisor_messages": [render_seed_message(seed), HumanMessage(content=focus)],
+        "research_brief": brief, "draft_report": "", "research_iterations": 0,
+        "needs_quality_repair": False, "final_exit": False,
+        "notes": [], "raw_notes": [], "quality_history": [],
+        "active_critiques": [], "research_trace": [], "supervisor_memory_hint": "",
+        "research_generation": next_gen, "quality_gate_version": 2,
+    }
+    # Child must not inherit parent's thread_id or checkpoint. Keep callbacks,
+    # tracing/tags, and recursion budget only.
+    child_config: dict[str, Any] = {k: v for k, v in (config or {}).items() if k != "configurable"}
+    child_config["recursion_limit"] = max(50, int(child_config.get("recursion_limit", 50)))
+    result = await supervisor_agent.ainvoke(child_input, config=child_config)
+    payload = result.get("speculative_research")
+    if not isinstance(payload, dict) or payload.get("generation") != next_gen or (
+        payload.get("seed_fingerprint") != seed_fingerprint(seed)
+    ):
+        raise ResearchFenceError("supplemental Supervisor returned a stale/mismatched generation")
+    merged, added = merge_candidate_notes(previous, payload.get("notes"))
+    history = list(state.get("quality_repair_history") or [])
+    history.append({
+        "source": source, "generation": next_gen, "requested_topics": list(topics),
+        "before_notes_count": len(previous), "new_notes_count": added,
+        "after_notes_count": len(merged), "round": count + 1,
+    })
+    update = {
+        "research_generation": next_gen,
+        "speculative_research": build_speculative_payload(
+            generation=next_gen, research_brief=brief, notes=merged,
+        ),
+        count_key: count + 1,
+        "quality_repair_history": history,
+        "quality_review": None, "red_team_review": None,
+        "repair_request": None,
+    }
+    traces = result.get("research_trace")
+    if isinstance(traces, list) and traces:
+        update["research_trace"] = traces
+    logger.info("targeted research %s gen %d -> %d, %d new/%d total notes",
+                source, gen, next_gen, added, len(merged))
+    return update
+
+
+async def quality_gate_failed(state: AgentState) -> dict:
+    """No-HITL runs cannot override unresolved, failed or exhausted audits."""
+    decision = state.get("quality_gate_decision") or {}
+    raise ResearchFenceError(
+        "V2 research quality requires human review: " + str(decision.get("reason", "unknown"))
+    )
 
 
 # ===== CLAIM VERIFICATION =====
@@ -451,85 +676,81 @@ def build_agent(with_hitl: bool = True, checkpoint_db: str | None = None) -> Any
     return builder.compile(checkpointer=checkpointer)
 
 
-def _create_builder(with_hitl: bool = True, speculative: bool | None = None) -> StateGraph:
-    """创建 StateGraph 并添加节点和边（公共逻辑）。
+def _create_builder(
+    with_hitl: bool = True,
+    speculative: bool | None = None,
+    quality_gate: bool | None = None,
+    quality_gate_version: int | None = None,
+) -> StateGraph:
+    """Create a parallel-only graph with versioned quality-review routes.
 
-    `speculative`：
-      - `None`（默认）= 按 env 开关 `DR_SEED_LITE_SPECULATIVE` 决定（新任务；
-        开关**默认 on** —— 投机拓扑即生产默认路径，显式 `=off` 一键回滚）；
-      - 显式 True/False = 强制拓扑 —— runner 在 resume 时依据 checkpoint 里的
-        lineage 标记（research_generation）传入，保证**在途任务即使在开关翻转后
-        重启也按其自身 lineage 的拓扑恢复**（回滚不需要 state migration）。
-
-    串行拓扑（历史行为，开关显式 off 的新任务）:
-      START → write_research_brief → write_draft_report → [human_review] → supervisor_subgraph
-          → claim_verification → final_report_generation → END
-
-    投机拓扑（Phase 5A/5B）:
-      START → write_research_brief → ┬ write_draft_report ────┐
-                                     └ supervisor_subgraph ───┴→ [human_review] → 后续同左
-      带 HITL 时 REJECT 回路：
-        human_review --revise(Command)--> regenerate_research → human_review
-      research_seed 在 write_research_brief 内部写出；两条分支是它的直接后继，
-      因此**同一 superstep 真正并发**；HITL 位于 AND-join 之后（spike 实测：
-      LangGraph 的 superstep 是屏障，HITL 不可能早于 research 分支结束）。
+    ``speculative`` remains as a backwards-compatible test/caller parameter.
+    False is explicitly refused; it must never silently restore a serial route.
+    Existing parallel V0/V1 checkpoints can still resume through their versioned
+    graph. Existing serial checkpoints cannot resume and must be drained on V2.
     """
-    from deep_research.research_seed import seed_lite_speculative_enabled
+    if speculative is False:
+        raise ValueError("serial graph was removed; use a parallel V2 checkpoint")
+    if quality_gate_version is None:
+        version = (quality_gate_version_for_new_job() if quality_gate is None
+                   else (QUALITY_GATE_VERSION if quality_gate else 0))
+    else:
+        version = quality_gate_version
+    if type(version) is not int or version not in (0, 1, 2):
+        raise ValueError(f"unsupported quality gate version: {version!r}")
 
-    if speculative is None:
-        speculative = seed_lite_speculative_enabled()
     builder = StateGraph(AgentState, input_schema=AgentInputState)
-
     builder.add_node("write_research_brief", write_research_brief)
     builder.add_node("write_draft_report", write_draft_report)
     builder.add_node("supervisor_subgraph", supervisor_agent)
     builder.add_node("claim_verification", claim_verification)
     builder.add_node("final_report_generation", final_report_generation)
-
     builder.add_edge(START, "write_research_brief")
 
-    if speculative:
-        # seed 在 write_research_brief 内部产出（见 draft_agent），因此这里是**纯 fan-out**：
-        # 两条分支都是 write_research_brief 的直接后继 → 落在**同一个 superstep** →
-        # 真正并发。任何额外的中转节点都会把 research 推到下一个 superstep（屏障），
-        # 从而重新串行化（实测踩过：overlap = 0.0）。
-        builder.add_edge("write_research_brief", "write_draft_report")
-        builder.add_edge("write_research_brief", "supervisor_subgraph")
-        # ⚠️ join 必须用**列表形式**：两次单独的 add_edge(a, c) / add_edge(b, c) 是
-        # "每条入边各触发一次"（OR/多次执行），不是等待全部完成。实测（spike）：
-        # 写成两条边时 human_review 会在 draft 完成后立刻触发、与 research 并行，
-        # 且 resume 时会把仍在 pending 的 supervisor_subgraph 再跑一遍（重复副作用）。
-        if with_hitl:
+    # Direct parallel fan-out; an intermediary seed node would break overlap.
+    builder.add_edge("write_research_brief", "write_draft_report")
+    builder.add_edge("write_research_brief", "supervisor_subgraph")
+
+    if version >= 1:
+        builder.add_node("evaluate_research", evaluate_research)
+        builder.add_node("red_team_audit", red_team_review)
+        # This list-form edge is an AND-join, not separate OR triggers.
+        builder.add_edge(["write_draft_report", "supervisor_subgraph"], "evaluate_research")
+        builder.add_edge("evaluate_research", "red_team_audit")
+        if version == 2:
+            from functools import partial
+
+            builder.add_node("route_quality_gate", partial(route_quality_gate, with_hitl=with_hitl))
+            builder.add_node("targeted_research", targeted_research)
+            builder.add_edge("red_team_audit", "route_quality_gate")
+            builder.add_edge("targeted_research", "evaluate_research")
+            if with_hitl:
+                builder.add_node("human_review", human_review)
+            else:
+                builder.add_node("accept_research", accept_research)
+                builder.add_node("quality_gate_failed", quality_gate_failed)
+                builder.add_edge("accept_research", "claim_verification")
+        elif with_hitl:
+            # Parallel V1 checkpoints still expect this review/regenerate topology.
             builder.add_node("human_review", human_review)
             builder.add_node("regenerate_research", regenerate_research)
-            builder.add_edge(["write_draft_report", "supervisor_subgraph"], "human_review")
-            # REJECT 回路：join 入边 + 独立回边指向同一目标 —— spike 实测
-            # （phase5b_topology_spike.py）：第一轮 join 仍只触发一次；之后
-            # 每一轮 regenerate 完成恰好再触发一次审查；分支不会被重复执行。
-            builder.add_edge("regenerate_research", "human_review")
-            # ⚠️ human_review **不得有静态出边**：LangGraph 中静态边会覆盖
-            # Command(goto)（tests/test_graph_wiring.py 锁定的语义）。approve /
-            # revise 的去向全部由节点自己返回的 Command 决定。
+            builder.add_edge("red_team_audit", "human_review")
+            builder.add_edge("regenerate_research", "evaluate_research")
         else:
-            # 无 HITL 的构建（离线/测试）：没有 reject 语义，研究在 join 后
-            # 自动 accept（fence 校验后并入 notes），与带 HITL 的 ACCEPT 同语义。
             builder.add_node("accept_research", accept_research)
-            builder.add_edge(["write_draft_report", "supervisor_subgraph"], "accept_research")
+            builder.add_edge("red_team_audit", "accept_research")
             builder.add_edge("accept_research", "claim_verification")
-        builder.add_edge("claim_verification", "final_report_generation")
-        builder.add_edge("final_report_generation", END)
-        return builder
-
-    if with_hitl:
+    elif with_hitl:
+        # Parallel V0 checkpoints are retained, but serial V0 is unsupported.
         builder.add_node("human_review", human_review)
-        builder.add_edge("write_research_brief", "write_draft_report")
-        builder.add_edge("write_draft_report", "human_review")
+        builder.add_node("regenerate_research", regenerate_research)
+        builder.add_edge(["write_draft_report", "supervisor_subgraph"], "human_review")
+        builder.add_edge("regenerate_research", "human_review")
     else:
-        builder.add_edge("write_research_brief", "write_draft_report")
-        builder.add_edge("write_draft_report", "supervisor_subgraph")
+        builder.add_node("accept_research", accept_research)
+        builder.add_edge(["write_draft_report", "supervisor_subgraph"], "accept_research")
+        builder.add_edge("accept_research", "claim_verification")
 
-    # supervisor 之后走 claim_verification → final_report
-    builder.add_edge("supervisor_subgraph", "claim_verification")
     builder.add_edge("claim_verification", "final_report_generation")
     builder.add_edge("final_report_generation", END)
     return builder

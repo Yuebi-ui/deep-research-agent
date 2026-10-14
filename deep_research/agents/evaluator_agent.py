@@ -31,3 +31,22 @@ def evaluate_draft_quality(research_brief: str, draft_report: str) -> Evaluation
     response = judge_model.invoke([HumanMessage(content=eval_prompt)])
     data = parse_json_response(response.content)
     return EvaluationResult(**data)
+
+
+async def evaluate_research_readiness(
+    research_brief: str, draft_report: str, research_notes: str
+) -> EvaluationResult:
+    """Independent research *readiness* assessment over draft AND evidence.
+
+    Called by the parent graph after the parallel join, not by refine_draft_report.
+    ``ainvoke`` avoids blocking the worker heartbeat during model calls.
+    """
+    from deep_research.prompts.research_quality import RESEARCH_READINESS_PROMPT
+
+    prompt = RESEARCH_READINESS_PROMPT.format(
+        research_brief=research_brief,
+        draft_report=draft_report,
+        research_notes=research_notes,
+    )
+    response = await judge_model.ainvoke([HumanMessage(content=prompt)])
+    return EvaluationResult(**parse_json_response(response.content))

@@ -32,6 +32,7 @@ from backend.runtime.events import EventType, publish
 from backend.runtime.queue import EnqueueRejected
 from backend.core.api_errors import (
     CODE_CANCEL_NOT_ALLOWED,
+    CODE_REVIEW_NOT_ALLOWED,
     CODE_QUEUE_UNAVAILABLE,
     CODE_TASK_NOT_FOUND,
     ApiError,
@@ -146,12 +147,25 @@ async def resume_research(thread_id: str, review: ReviewAction):
     # 只有 WAITING_REVIEW 可以接受审查决定（Phase D 已建立，保留）
     if coerce_status(task.status) is not TaskStatus.WAITING_REVIEW:
         raise InvalidReviewState(coerce_status(task.status))
+    # API never opens checkpoints; the worker projects V2 review capability into
+    # ``task.stage`` when emitting WAITING_REVIEW. Old V0/V1 jobs stay safe.
+    if review.action in ("revise_draft", "more_research") and task.stage != "human_review_v2":
+        raise ApiError(
+            CODE_REVIEW_NOT_ALLOWED,
+            "此审查动作只适用于 Quality Gate V2；旧任务请使用 approve/revise",
+            status_code=409,
+        )
 
     get_repository().create_review(thread_id, review.action, review.feedback)
 
     # 状态先回到 RUNNING，表示"已受理、待执行"
     task.status = TaskStatus.RUNNING.value
-    task.stage = "supervisor_subgraph"
+    # Stage here is a task projection only; Graph routes from its checkpoint.
+    task.stage = (
+        {"approve": "claim_verification", "revise_draft": "evaluate_research",
+         "more_research": "targeted_research"}.get(review.action, "supervisor_subgraph")
+        if task.stage == "human_review_v2" else "supervisor_subgraph"
+    )
     from datetime import datetime
 
     task.updated_at = datetime.now()
@@ -183,6 +197,7 @@ async def cancel_research(thread_id: str):
     if current in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.DELETED):
         raise ApiError(
             CODE_CANCEL_NOT_ALLOWED,
+    CODE_REVIEW_NOT_ALLOWED,
             f"终态任务不可取消: {current.value}",
             status_code=409,
             details={"current": current.value},
