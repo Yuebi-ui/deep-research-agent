@@ -197,7 +197,6 @@ async def cancel_research(thread_id: str):
     if current in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.DELETED):
         raise ApiError(
             CODE_CANCEL_NOT_ALLOWED,
-    CODE_REVIEW_NOT_ALLOWED,
             f"终态任务不可取消: {current.value}",
             status_code=409,
             details={"current": current.value},

@@ -102,6 +102,7 @@ def _subgraph_init() -> dict:
     return {
         "supervisor_messages": [HumanMessage(content="Research: compare A and B")],
         "research_brief": "compare A and B",
+        "research_generation": 1,
         "research_iterations": 0,
         "notes": [],
         "raw_notes": [],

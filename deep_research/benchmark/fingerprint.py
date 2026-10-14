@@ -140,7 +140,10 @@ def scrub_secrets(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [scrub_secrets(v) for v in obj]
     if isinstance(obj, str):
-        return _SECRET_VALUE_RE.sub(REDACTED, obj)
+        # Normalize placeholders from upstream redaction (which can use
+        # uppercase), so benchmark artifacts always contain one stable form.
+        canonical = re.sub(r"<redacted>", REDACTED, obj, flags=re.IGNORECASE)
+        return _SECRET_VALUE_RE.sub(REDACTED, canonical)
     return obj
 
 
