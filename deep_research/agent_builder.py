@@ -39,7 +39,6 @@ from deep_research.quality_gate import (
     QUALITY_GATE_VERSION,
     checked_candidate_notes,
     format_candidate_notes,
-    quality_gate_enabled,
     quality_gate_lineage,
     auto_research_lineage,
     quality_gate_version_for_new_job,

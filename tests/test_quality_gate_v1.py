@@ -5,8 +5,6 @@ Run with project's Fake LLM dependencies installed:
 """
 
 from __future__ import annotations
-
-import asyncio
 import json
 
 import pytest
@@ -120,8 +118,7 @@ async def test_quality_gate_join_review_then_approve(quality_env):
 async def test_quality_gate_revise_reruns_quality_and_fences_old_research(quality_env):
     graph = _graph()
     cfg = {"configurable": {"thread_id": "quality-revise"}, "recursion_limit": 80}
-    _, first = await _drain(graph, cfg, {"messages": [HumanMessage(content="compare databases")]})
-    old = first.values["speculative_research"]["notes"]
+    await _drain(graph, cfg, {"messages": [HumanMessage(content="compare databases")]})
     order, second = await _drain(graph, cfg, Command(resume={"action": "revise", "feedback": "More comparison"}))
     assert tuple(second.next) == ("human_review",)
     assert second.values["research_generation"] == 2

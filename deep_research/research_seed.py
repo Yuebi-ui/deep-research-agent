@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Mapping
 
 SEED_VERSION = "seed-lite-v1"
