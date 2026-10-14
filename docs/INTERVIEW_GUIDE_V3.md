@@ -22,7 +22,6 @@
 ## 演示建议（先做可重复的离线演示）
 
 ```bash
-python scripts/verify_original_baseline.py
 python scripts/test_quality_gate_v2_offline.py
 python scripts/test_parallel_only_v3_offline.py
 python scripts/check_repo_hygiene.py
