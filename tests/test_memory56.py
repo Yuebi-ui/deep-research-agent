@@ -48,7 +48,8 @@ def test_stage_memory_is_non_authoritative_and_bounded(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_supervisor_reads_on_first_round_and_feedback_repair(monkeypatch):
+async def test_supervisor_reads_on_first_round_and_reuses_hint(monkeypatch):
+    """V3 Supervisor 首轮召回记忆，后续轮次复用而不重复召回。"""
     mod = importlib.import_module("deep_research.agents.supervisor")
     history = []
     calls = []
@@ -65,23 +66,41 @@ async def test_supervisor_reads_on_first_round_and_feedback_repair(monkeypatch):
     monkeypatch.setattr(mod, "async_stage_context", recall)
     monkeypatch.setattr(mod, "stage_enabled", lambda: True)
     monkeypatch.setattr(mod, "supervisor_model_with_tools", FakeSupervisor())
+    aspects = [{"aspect_id": "pricing", "title": "定价策略"}]
     first = await mod.supervisor({
-        "research_brief": "银河实验室新产品", "supervisor_messages": [HumanMessage(content="research")],
+        "quality_gate_version": 3,
+        "required_aspects": aspects,
+        "research_brief": "银河实验室新产品",
+        "supervisor_messages": [HumanMessage(content="research")],
         "research_iterations": 0,
     })
     assert len(history) == 1 and first.update["supervisor_memory_hint"]
     assert any("历史参考" in str(x.content) for x in calls[-1])
+    assert any("pricing" in str(x.content) for x in calls[-1])
+
     second = await mod.supervisor({
-        "research_brief": "银河实验室新产品", "supervisor_messages": [], "research_iterations": 1,
+        "quality_gate_version": 3,
+        "required_aspects": aspects,
+        "research_brief": "银河实验室新产品",
+        "supervisor_messages": [],
+        "research_iterations": 1,
         "supervisor_memory_hint": first.update["supervisor_memory_hint"],
     })
-    assert second.update["research_iterations"] == 2 and len(history) == 1
-    await mod.supervisor({
-        "research_brief": "银河实验室新产品", "supervisor_messages": [], "research_iterations": 2,
-        "needs_quality_repair": True,
-        "quality_history": [{"feedback": "数据未覆盖定价"}],
-    })
-    assert len(history) == 2 and "定价" in history[-1][0]
+    assert second.update["research_iterations"] == 2
+    assert len(history) == 1
+    assert second.update["supervisor_memory_hint"] == first.update["supervisor_memory_hint"]
+
+
+@pytest.mark.asyncio
+async def test_supervisor_requires_current_gate_state():
+    """缺少当前状态契约时不能误按其他研究流程继续。"""
+    mod = importlib.import_module("deep_research.agents.supervisor")
+    with pytest.raises(ValueError, match="only V3 Supervisor state is supported"):
+        await mod.supervisor({
+            "research_brief": "缺少必要状态",
+            "supervisor_messages": [],
+            "research_iterations": 0,
+        })
 
 
 def test_researcher_fetches_at_start_and_after_new_search(monkeypatch):
