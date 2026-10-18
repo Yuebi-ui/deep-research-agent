@@ -115,7 +115,7 @@ def normalize_url(url: str) -> str:
         if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
             return ""
         host = parts.hostname.lower().rstrip(".")
-        if any(ch.isspace() for ch in host) or host == "localhost" or not "." in host:
+        if any(ch.isspace() for ch in host) or host == "localhost" or "." not in host:
             return ""
         # Strip fragments; links with different tracking parameters may still
         # remain distinct URLs, but publisher-domain counting de-duplicates them.

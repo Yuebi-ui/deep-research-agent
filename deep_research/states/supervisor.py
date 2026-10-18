@@ -9,7 +9,7 @@
 """
 
 import operator
-from typing_extensions import Annotated, Optional, Sequence, TypedDict, List
+from typing_extensions import Annotated, Optional, Sequence, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.tools import tool

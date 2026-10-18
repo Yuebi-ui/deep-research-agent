@@ -182,7 +182,6 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
         # 初始化变量
         tool_messages = []
         all_raw_notes = []
-        draft_report = state.get("draft_report", "")
         updates = {}
         next_step = "supervisor"
 
