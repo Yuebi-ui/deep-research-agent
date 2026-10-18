@@ -399,7 +399,8 @@ def process_search_results(unique_results: dict, query: str = "") -> dict:
 
         summarized_results[url] = {
             'title': result['title'],
-            'content': content
+            'content': content,
+            'published_at': result.get('published_date') or result.get('published_at'),
         }
 
     return summarized_results
@@ -421,7 +422,17 @@ def format_search_output(summarized_results: dict) -> str:
 
     for i, (url, result) in enumerate(summarized_results.items(), 1):
         formatted_output += f"\n\n--- SOURCE {i}: {result['title']} ---\n"
-        formatted_output += f"URL: {url}\n\n"
+        formatted_output += f"URL: {url}\n"
+        publication = result.get("published_at")
+        if isinstance(publication, str) and len(publication) >= 10:
+            from datetime import date
+            try:
+                date.fromisoformat(publication[:10])
+            except ValueError:
+                pass
+            else:
+                formatted_output += f"Published: {publication[:10]}\n"
+        formatted_output += "\n"
         formatted_output += f"SUMMARY:\n{result['content']}\n\n"
         formatted_output += "-" * 80 + "\n"
 
@@ -430,21 +441,8 @@ def format_search_output(summarized_results: dict) -> str:
 
 # ===== RESEARCH TOOLS =====
 
-def tavily_search(
-    query: str,
-    max_results: Annotated[Optional[int], InjectedToolArg] = None,
-    topic: Annotated[Optional[Literal["general", "news", "finance"]], InjectedToolArg] = None,
-) -> str:
-    """根据配置好的tavily API去web上搜索结果，并返回做完网页内容摘要后的结果
-
-    Args:
-        query: 搜索关键词(query).
-        max_results: 返回的最大结果数量(可选参数)，默认是3
-        topic: 搜索主题，参数可以为：general, news, finance,（可选参数），默认是"general"
-
-    Returns:
-        格式化后并且去重+做完网页内容摘要的结果
-    """
+def _tavily_search_payload(query, max_results=None, topic=None):
+    """The single execution path shared by legacy tool and V3 receipt tool."""
     # 获取默认参数
     _, _, defaults = _ensure_search_runtime()
     if defaults is None:
@@ -472,7 +470,38 @@ def tavily_search(
     summarized_results = process_search_results(unique_results, query=query)
 
     # 格式化输出
-    return format_search_output(summarized_results)
+    return summarized_results, unique_results
+
+
+def tavily_search(
+    query: str,
+    max_results: Annotated[Optional[int], InjectedToolArg] = None,
+    topic: Annotated[Optional[Literal["general", "news", "finance"]], InjectedToolArg] = None,
+) -> str:
+    """根据配置好的tavily API去web上搜索结果，并返回做完网页内容摘要后的结果
+
+    Args:
+        query: 搜索关键词(query).
+        max_results: 返回的最大结果数量(可选参数)，默认是3
+        topic: 搜索主题，参数可以为：general, news, finance,（可选参数），默认是"general"
+
+    Returns:
+        格式化后并且去重+做完网页内容摘要的结果
+    """
+    summaries, _ = _tavily_search_payload(query, max_results, topic)
+    return format_search_output(summaries)
+
+
+def tavily_search_with_sources(query: str, max_results=None, topic=None):
+    """V3-only tool adapter: user-visible search output plus structured receipt.
+
+    Receipts originate from search-provider result dictionaries BEFORE the LLM
+    summarizer or the formatting layer. No extra provider/LLM call is made.
+    """
+    from deep_research.evidence import collect_provider_sources
+
+    summaries, unique = _tavily_search_payload(query, max_results, topic)
+    return format_search_output(summaries), collect_provider_sources(unique)
 
 
 def think_tool(reflection: str) -> str:

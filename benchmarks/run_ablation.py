@@ -1,6 +1,6 @@
 """Convenience entry point for local retrieval ablations or real-run comparison.
 
-Presets for E2E live runs reside in configs/runtime_ablation.v1.json and must be
+Presets for E2E live runs reside in configs/runtime_ablation.json and must be
 applied to running workers by the operator. No live services are started here.
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ def main(argv=None):
     if args.mode=='offline':
         return offline_main(['--output',str(args.output.parent/'offline_fixture')])
     if args.mode=='presets':
-        config=json.loads((ROOT/'benchmarks'/'configs'/'runtime_ablation.v1.json').read_text('utf-8'))
+        config=json.loads((ROOT/'benchmarks'/'configs'/'runtime_ablation.json').read_text('utf-8'))
         print(json.dumps(config,indent=2,ensure_ascii=False))
         return 0
     if args.input is None:

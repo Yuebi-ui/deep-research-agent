@@ -22,6 +22,7 @@ from deep_research.memory.vector_store import VectorMemoryStore, SECTION_COLLECT
 from deep_research.memory.structured_store import StructuredMemoryStore
 from deep_research.memory.schemas import Entity, MemoryClaim, Evidence, Contradiction
 from deep_research.memory.sections import ReportSection, split_report_sections
+from deep_research.memory.tenant import current_user_id
 from deep_research.memory.retrieval import fuse_records, lexical_score, possible_temporal_change
 from deep_research.llm import get_chat_model_for_task
 from deep_research.utils import parse_json_response
@@ -81,7 +82,7 @@ def _normalized(text: str) -> str:
 
 
 def _stable_id(namespace: str, *components: str) -> str:
-    body = "\x00".join(components)
+    body = "\x00".join((current_user_id(), *components))
     return namespace + "-" + hashlib.sha256(body.encode("utf-8")).hexdigest()[:24]
 
 

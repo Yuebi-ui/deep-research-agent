@@ -20,7 +20,18 @@ def main() -> int:
     parser.add_argument("--decision", choices=["confirmed_change", "confirmed_conflict", "dismissed"])
     parser.add_argument("--reviewer")
     parser.add_argument("--rationale")
+    parser.add_argument("--user", help="Configured account ID; required for multi-user review")
     args = parser.parse_args()
+    from deep_research.memory.tenant import resolve_cli_account, memory_user_scope
+    try:
+        owner = resolve_cli_account(args.user)
+    except ValueError as exc:
+        parser.error(str(exc))
+    with memory_user_scope(owner):
+        return _run_review(args, parser)
+
+
+def _run_review(args, parser) -> int:
     from deep_research.agent_builder import _get_memory_manager
     manager = _get_memory_manager()
     if args.list:

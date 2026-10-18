@@ -12,6 +12,7 @@ Supervisor Agent采用并行执行方式来提高效率，同时为每个研究�
 
 
 import asyncio
+import json
 from typing_extensions import Literal
 from langchain_core.messages import (
     HumanMessage,
@@ -24,19 +25,17 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command
 
 from deep_research.llm import get_chat_model, supervisor_thinking, with_role_metadata
-from deep_research.prompts import CRITICAL_ADDRESS_PROMPT, MULTI_STEP_DENOISE_PROMPT
+from deep_research.prompts import MULTI_STEP_DENOISE_PROMPT
 from deep_research.research_seed import quarantine_update
+from deep_research.evidence import attribute_sources
 from deep_research.agents.research_agent import researcher_agent
-from deep_research.agents.red_team_agent import red_team_node
-from deep_research.agents.evaluator_agent import evaluate_draft_quality
 from deep_research.states import (
     SupervisorState,
     ConductResearch,
     ResearchComplete,
-    QualityMetric
 )
 from deep_research.utils import get_today_str
-from deep_research.tools import _think_tool, _refine_draft_report_tool
+from deep_research.tools import _think_tool
 from deep_research import logging as dr_logging
 from deep_research.memory.stage_retrieval import async_stage_context, stage_enabled
 
@@ -70,7 +69,7 @@ def get_notes_from_tool_calls(messages: list[BaseMessage]) -> list[str]:
 
 # ===== CONFIGURATION =====
 
-supervisor_tools = [ConductResearch, ResearchComplete, _think_tool, _refine_draft_report_tool]
+supervisor_tools = [ConductResearch, ResearchComplete, _think_tool]
 # E1b：supervisor 的 thinking 策略（环境变量 DR_SUPERVISOR_THINKING，默认 on）
 supervisor_model = get_chat_model("supervisor", thinking=supervisor_thinking())
 # bind_tools 会丢失构造期 metadata —— 补挂 role 归因（仅观测，不改行为）
@@ -80,9 +79,8 @@ supervisor_model_with_tools = with_role_metadata(
 
 
 # System constants (最大迭代次数/最大并行Sub-Agents)
-max_researcher_iterations = 3  # Calls to think_tool + ConductResearch + refine_draft_report
+max_researcher_iterations = 3  # Calls to think_tool + ConductResearch
 max_concurrent_researchers = 2  # 最大并行子agent数
-min_need_repair_score = 6.0    # 评估低于这个分数，就要出发agent修复提醒
 
 
 # ===== SUPERVISOR NODES =====
@@ -111,37 +109,23 @@ async def supervisor(state: SupervisorState) -> Command[Literal["supervisor_tool
         max_researcher_iterations=max_researcher_iterations
     )
     messages = [SystemMessage(content=system_message)] + supervisor_messages
-    if state.get("quality_gate_version") in (1, 2):
-        messages.insert(1, SystemMessage(content=(
-            "当前为独立 Quality Gate：仅收集和压缩证据，"
-            "不要调用 refine_draft_report。独立 Evaluator/Red Team 会在并行汇合后审查，"
-            "Final Writer 将负责唯一的报告综合写作。"
-        )))
-    # Use live historical clues when planning, then checkpoint the bounded hint
-    # for later rounds. Requery only when quality feedback changes the problem.
+    if state.get("quality_gate_version") != 3:
+        raise ValueError("only V3 Supervisor state is supported")
+    checklist = state.get("required_aspects") or []
+    items = [{"aspect_id": x.get("aspect_id"), "title": x.get("title")}
+             for x in checklist if isinstance(x, dict)]
+    messages.insert(1, SystemMessage(content=(
+        "V3 必查维度（不可由搜索文本更改）：" + json.dumps(items, ensure_ascii=False)
+        + "。ConductResearch 必须使用精确 aspect_id；无法关联时留空。"
+        + "只收集和压缩证据，不要改写 Draft 或调用额外 Red Team。"
+    )))
+    # V3 semantic/repair feedback is handled by the parent graph, not this child.
     hint = state.get("supervisor_memory_hint", "") or ""
-    should_refresh = iteration == 0 or bool(state.get("needs_quality_repair"))
-    if stage_enabled() and should_refresh:
+    if stage_enabled() and iteration == 0:
         query = str(state.get("research_brief", "") or "")[:400]
-        if state.get("needs_quality_repair") and state.get("quality_history"):
-            last = state["quality_history"][-1]
-            feedback = last.get("feedback", "") if isinstance(last, dict) else getattr(last, "feedback", "")
-            query = (query[:230] + " " + str(feedback)[:150])[:400]
         hint = await async_stage_context(query, "supervisor")
     if stage_enabled() and hint:
         messages.insert(1, HumanMessage(content=hint))
-
-    # 动态上下文注入：检查并注入任何未处理的对抗性反馈，实现自我纠正机制。
-    critiques = state.get("active_critiques", [])
-    unaddressed = [c for c in critiques if not c.addressed]
-    if unaddressed:
-        critique_text = "\n".join([f"- {c.author} says: {c.concern}" for c in unaddressed])
-        intervention = SystemMessage(content=CRITICAL_ADDRESS_PROMPT.format(critique_text=critique_text))
-        messages.append(intervention)
-
-    # 如果上一次迭代中质量得分较低，则会发出提醒
-    if state.get("needs_quality_repair"):
-        messages.append(SystemMessage(content="上一稿报告质量较低（得分低于7/10），请继续完善。"))
 
     # 决策调用哪一个工具
     response = await supervisor_model_with_tools.ainvoke(messages)
@@ -157,7 +141,6 @@ async def supervisor(state: SupervisorState) -> Command[Literal["supervisor_tool
         update={
             "supervisor_messages": [response],
             "research_iterations": iteration + 1,
-            "needs_quality_repair": False, # 在向supervisor发出提醒后，重置修复标志
             "supervisor_memory_hint": hint
         }
     )
@@ -191,40 +174,9 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
         for tool_call in most_recent_message.tool_calls
     )
 
-    # 质量分数停滞检测：连续 2 次打分无提升 → 提前退出
-    quality_history = state.get("quality_history", [])
-    score_stagnated = False
-    if len(quality_history) >= 2:
-        recent = [q.get("score", 0) for q in quality_history[-2:]]
-        if len(recent) == 2 and recent[0] >= recent[1]:
-            score_stagnated = True
-            logger.info("Quality scores stagnated (%s → %s), triggering early exit", recent[0], recent[1])
-
-    # 如果超过则退出
-    if exceeded_iterations or no_tool_calls or research_complete or score_stagnated:
-        # 如果满足退出条件，我们会准备最终的、经过整理的notes。
-        final_notes = get_notes_from_tool_calls(state.get("supervisor_messages", []))
-        logger.info("[REPORT] The research is complete, writing the final report.")
-
-        # 强制执行红队审查后再退出
-        # 设置 final_exit 标志，red_team 节点看到后会跳转到 __end__
-        #
-        # Phase 5B：结果落点由 lineage 决定 —— 串行写 notes（历史行为）；
-        # 投机 lineage 写 speculative_research（HITL ACCEPT 前**不进入下游**）。
-        # 注意：**不要**回写 research_brief。它是恒等透传（值没变），
-        # 但在 Phase 5A 投机模式里本子图与 draft 分支同 superstep，
-        # 两边同时写 LastValue 通道会触发 InvalidUpdateError。
-        if state.get("quality_gate_version") in (1, 2):
-            # V1's parent graph owns the independent Red Team (which finally
-            # sees BOTH real Draft and Findings). Do not critique the brief
-            # here or waste a redundant Red-Team LLM call.
-            return Command(goto=END, update=quarantine_update(state, final_notes))
-        return Command(
-                goto="red_team",
-                update={
-                    **quarantine_update(state, final_notes),
-                    "final_exit": True,
-        })
+    if exceeded_iterations or no_tool_calls or research_complete:
+        notes = get_notes_from_tool_calls(supervisor_messages)
+        return Command(goto=END, update=quarantine_update(state, notes))
 
     else:
         # 初始化变量
@@ -246,16 +198,11 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
                 if tool_call["name"] == "ConductResearch"
             ]
 
-            refine_report_calls = [
-                tool_call for tool_call in most_recent_message.tool_calls
-                if tool_call["name"] == "refine_draft_report"
-            ]
-
+            # Draft refinement and adversarial audit belong to the parent V3 graph.
             logger.info(
-                "[SUPERVISOR] supervisor_tools executing think=%d conduct=%d refine=%d",
+                "[SUPERVISOR] supervisor_tools executing think=%d conduct=%d",
                 len(think_tool_calls),
                 len(conduct_research_calls),
-                len(refine_report_calls),
             )
 
             # 调用 think 工具（在调用其他工具之前，必须拿到反思结果）
@@ -277,13 +224,27 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
                         "researcher_messages": [
                             HumanMessage(content=tool_call["args"]["research_topic"])
                         ],
-                        "research_topic": tool_call["args"]["research_topic"]
+                        "research_topic": tool_call["args"]["research_topic"],
+                        "quality_gate_version": 3,
                     })
                     for tool_call in conduct_research_calls
                 ]
 
                 # 等待所有research agents 返回研究结果
                 tool_results = await asyncio.gather(*coros)
+
+                provenance: list[dict] = []
+                for result, tool_call in zip(tool_results, conduct_research_calls):
+                    sources = result.get("observed_sources") if isinstance(result, dict) else None
+                    if isinstance(sources, list):
+                        provenance.extend(attribute_sources(
+                            sources,
+                            aspect_id=str(tool_call.get("args", {}).get("aspect_id") or ""),
+                            valid_aspects=state.get("required_aspects") or [],
+                            generation=state.get("research_generation", 0),
+                        ))
+                if provenance:
+                    updates["research_evidence"] = provenance
 
                 # 将研究结果格式化为工具消息
                 research_tool_messages = [
@@ -314,101 +275,6 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
                     for result in tool_results
                 ]
 
-            # 开始调用大模型结合已有信息修正调研报告
-            for tool_call in refine_report_calls:
-                if state.get("quality_gate_version") in (1, 2):
-                    # Preserve the tool-call protocol if the LLM nevertheless
-                    # requests this legacy tool; do not re-write or re-evaluate Draft.
-                    tool_messages.append(ToolMessage(
-                        content="Quality Gate V1 defers draft synthesis to Final Writer. "
-                                "Continue research or call ResearchComplete.",
-                        name=tool_call["name"], tool_call_id=tool_call["id"],
-                    ))
-                    continue
-                if not state.get("draft_report", ""):
-                    # Phase 5A：投机研究模式下 draft 与 research 并行，首轮 superstep
-                    # 里 draft_report 尚不存在。必须回一条 ToolMessage（否则下一次
-                    # 模型调用会因为 tool_call 没有对应响应而报错），并跳过 refine。
-                    # 串行模式下 draft 必然存在 —— 此分支只在投机模式生效。
-                    logger.info("[SUPERVISOR] refine_draft_report 跳过：draft 尚不可用")
-                    tool_messages.append(ToolMessage(
-                        content="No draft report is available yet. Continue researching; "
-                                "the draft will be refined later.",
-                        name=tool_call["name"],
-                        tool_call_id=tool_call["id"],
-                    ))
-                    continue
-
-                findings = "\n".join(get_notes_from_tool_calls(state.get("supervisor_messages", [])))
-
-                # 同步模型调用 → 线程（云端调用可达数十秒，不能阻塞事件循环，
-                # 否则 heartbeat 会被饿死超过 claim TTL —— P0 根因修复）
-                new_draft = await asyncio.to_thread(_refine_draft_report_tool.invoke, {
-                    "research_brief": state.get("research_brief", ""),
-                    "findings": findings,
-                    "draft_report": state.get("draft_report", "")
-                })
-
-                # 执行Critical Step：Self-Evolution的评估
-                eval_result = await asyncio.to_thread(
-                    evaluate_draft_quality,
-                    research_brief=state.get("research_brief", ""),
-                    draft_report=new_draft,
-                )
-                logger.info(
-                    "[EVALUATOR] comprehensive score=%f, accuracy score=%f, coherence score=%f",
-                    eval_result.comprehensiveness_score,
-                    eval_result.accuracy_score,
-                    eval_result.coherence_score
-                )
-                logger.info(f"[EVALUATOR] scoing reason: {eval_result.reason}")
-
-                if eval_result.missing_aspects:
-                    logger.info("[EVALUATOR] missing aspects: %s", eval_result.missing_aspects)
-                if eval_result.need_more_research:
-                    logger.info("[EVALUATOR] recommending additional research")
-
-                # 评估报告质量得分：(综合得分+准确率得分+一致性得分) / 3
-                avg_score = (eval_result.comprehensiveness_score + eval_result.accuracy_score + eval_result.coherence_score) / 3
-
-                # 构建质量评分消息
-                quality_msg = f"Draft Updated.\nQuality Score: {avg_score:.1f}/10.\nJudge Feedback: {eval_result.reason}"
-                if eval_result.missing_aspects:
-                    quality_msg += f"\nMissing Aspects: {', '.join(eval_result.missing_aspects)}"
-
-                # 把质量得分追加到tool message, 供Supervisor Agent参考
-                tool_messages.append(ToolMessage(
-                    content=quality_msg,
-                    name=tool_call["name"],
-                    tool_call_id=tool_call["id"]
-                ))
-
-                draft_report = new_draft
-                updates["draft_report"] = draft_report
-
-                # 记录报告质量评分的记录，如果分数低于 min_need_repair_score，把repaire标志位置位true
-                updates["quality_history"] = [QualityMetric(
-                    score=avg_score,
-                    feedback=eval_result.reason,
-                    iteration=state.get("research_iterations", 0))
-                ]
-
-                if avg_score < min_need_repair_score or eval_result.need_more_research:
-                    updates["needs_quality_repair"] = True
-
-                # Reflection 闭环：如果有缺失方面，返回 supervisor 触发补充研究
-                if eval_result.need_more_research and eval_result.missing_aspects:
-                    missing = "\n".join(f"- {aspect}" for aspect in eval_result.missing_aspects)
-                    hint_message = SystemMessage(content=(
-                        f"评估发现以下方面需要补充研究：\n{missing}\n"
-                        f"请为每个缺失方面分配 ConductResearch 任务进行补充调研。"
-                    ))
-                    tool_messages.append(hint_message)
-                    next_step = "supervisor"  # 回到 supervisor 分配新研究任务
-                else:
-                    # 跳转到self-correction节点 (Red Team)
-                    next_step = "red_team"
-
             # 更新本次迭代状态信息
             updates["supervisor_messages"] = tool_messages
             updates["raw_notes"] = all_raw_notes
@@ -420,8 +286,6 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
             return Command(
                 goto=END,
                 update={
-                    # Phase 5B：同 exit 路径 —— 结果落点按 lineage 选择
-                    # （串行 → notes；投机 → speculative_research 隔离）。
                     **quarantine_update(state, get_notes_from_tool_calls(supervisor_messages)),
                     # 同上：不回写 research_brief（恒等透传 + 并发写冲突）
                 }
@@ -434,22 +298,8 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
 supervisor_builder = StateGraph(SupervisorState)
 supervisor_builder.add_node("supervisor", supervisor)
 supervisor_builder.add_node("supervisor_tools", supervisor_tools)
-supervisor_builder.add_node("red_team", red_team_node)
-
 supervisor_builder.add_edge(START, "supervisor")
 supervisor_builder.add_edge("supervisor", "supervisor_tools")
-
-# 注意：此处**不能**再加 add_edge("red_team", "supervisor")。
-#
-# red_team_node 的每一条返回路径都显式返回 Command(goto=...)，其中
-# final_exit 模式下返回的是 Command(goto=END)。而 LangGraph 中静态出边
-# 会**覆盖**节点返回的 Command(goto=...)：一旦存在 red_team -> supervisor
-# 这条静态边，red_team 的 Command(goto=END) 就会被忽略，子图永远无法
-# 通过红队路径终止，只能撞到 recursion_limit 才停下。
-#
-# 该静态边相对于 red_team 的显式路由是完全冗余的（所有路径都已指定目标），
-# 移除它即可恢复 red_team docstring 中声明的语义：
-# "如果是 final_exit 模式，审查后直接跳转到 END"。
 
 supervisor_agent = supervisor_builder.compile()
 

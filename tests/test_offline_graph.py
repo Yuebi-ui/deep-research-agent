@@ -1,16 +1,7 @@
-"""整图离线执行（执行包 Phase D.5，§23-25）。
+"""V3-only offline graph behavior with Fake models (no paid APIs).
 
-本文件包含三类测试，**目的不同，不要混淆**：
-
-1. **网络安全测试** —— 整图跑一遍，证明不产生任何外部调用。
-   它**不**证明图能收敛。
-2. **确定性收敛测试** —— 证明图能跑到 END 并产出 final_report。
-   成功条件里**不允许**出现 ``except GraphRecursionError: pass``
-   （执行包 §25 明确要求）。
-3. **HITL happy path** —— 驱动真实图的 interrupt / resume 全程。
-
-后台：修复 `red_team` 的静态出边之前，supervisor 子图**无法通过红队路径
-终止**（见 tests/test_graph_wiring.py 的回归测试）。
+HITL approval is mandatory; the old no-HITL automatic acceptance path has
+been removed. No test should expect an unreviewed final report.
 """
 
 from __future__ import annotations
@@ -23,113 +14,30 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
 from deep_research.agent_builder import _create_builder
+from deep_research.research_seed import ResearchFenceError
 from deep_research.testing.fake_llm import FakeChatModel
 
-# 图在 Fake 模型下的确定性执行需要多步，但远小于此上限；
-# 留出余量是为了让"未收敛"表现为失败而不是超时。
 _RECURSION_LIMIT = 60
 
 
-def _run_graph(*, with_hitl: bool = False, limit: int = _RECURSION_LIMIT) -> dict:
-    """同步跑完整图并返回最终 state。不吞任何异常。"""
-    graph = _create_builder(with_hitl=with_hitl).compile()
-    state = {"messages": [HumanMessage(content="Compare LangGraph and CrewAI")]}
-    return asyncio.run(graph.ainvoke(state, config={"recursion_limit": limit}))
-
-
-# ===== 1. 网络安全测试 =====
-
-
-def test_graph_execution_makes_no_external_calls():
-    """整图执行不得触发网络守卫。
-
-    注意本测试的**目的仅限网络隔离**：若任何 provider 意外走到真实网络
-    路径，conftest 的守卫会抛
-    ``RuntimeError: External network access is disabled...``，本测试即失败。
-
-    图是否能收敛由下面的 test_full_graph_converges_offline 负责，两者不可混淆。
-    """
-    try:
-        _run_graph(with_hitl=False, limit=25)
-    except Exception as exc:  # noqa: BLE001
-        # 收敛问题由专门的测试覆盖，这里只关心"没有外联"
-        assert "External network access is disabled" not in str(exc), (
-            f"整图执行尝试访问外部网络: {exc}"
-        )
-
-
-# ===== 2. 确定性收敛 =====
-
-
-def test_full_graph_converges_offline():
-    """图必须跑到 END，产出 final_report，且**不得**抛 GraphRecursionError。
-
-    这是执行包 §25 要求的"真正的"收敛测试。它不捕获 GraphRecursionError——
-    一旦回归，测试直接失败。
-    """
-    final = _run_graph(with_hitl=False)
-
-    assert final.get("final_report"), "收敛但未产出 final_report"
-    assert isinstance(final["final_report"], str)
-    assert final["final_report"].strip()
-
-
-def test_full_graph_visits_each_node_once():
-    """节点顺序与次数必须确定——这是"确定性"的具体含义。"""
+def test_graph_without_hitl_never_auto_approves():
+    """Removing HITL can never bypass V3's evidence admission fence."""
     graph = _create_builder(with_hitl=False).compile()
     state = {"messages": [HumanMessage(content="Compare LangGraph and CrewAI")]}
-
-    async def collect() -> list[str]:
-        order = []
-        async for chunk in graph.astream(
-            state, config={"recursion_limit": _RECURSION_LIMIT}, stream_mode="updates"
-        ):
-            order.extend(chunk.keys())
-        return order
-
-    order = asyncio.run(collect())
-
-    assert order == [
-        "write_research_brief",
-        "write_draft_report",
-        "supervisor_subgraph",
-        "accept_research",
-        "claim_verification",
-        "final_report_generation",
-    ], f"节点顺序不符: {order}"
+    with pytest.raises(ResearchFenceError, match="human review"):
+        asyncio.run(graph.ainvoke(state, config={"recursion_limit": _RECURSION_LIMIT}))
 
 
-def test_supervisor_subgraph_terminates_via_red_team():
-    """回归测试：supervisor 子图必须能通过红队路径终止。
-
-    背景：曾经存在 `add_edge("red_team", "supervisor")` 静态边。LangGraph 中
-    静态出边会**覆盖**节点返回的 `Command(goto=END)`，导致 red_team 永远无法
-    结束子图，只能撞 recursion_limit。该静态边已移除——本测试锁定这一点。
-    """
-    from deep_research.agents.supervisor import supervisor_agent
-
-    init = {
-        "supervisor_messages": [HumanMessage(content="Research: compare A and B")],
-        "research_brief": "compare A and B",
-        "research_generation": 1,
-        "research_iterations": 0,
-        "notes": [],
-        "raw_notes": [],
-        "quality_history": [],
-        "active_critiques": [],
-        "draft_report": "# 草稿",
-    }
-
-    async def count_steps() -> int:
-        steps = 0
-        async for _ in supervisor_agent.astream(
-            init, config={"recursion_limit": 20}, stream_mode="updates"
-        ):
-            steps += 1
-        return steps
-
-    steps = asyncio.run(count_steps())
-    assert steps < 20, f"子图未收敛，跑了 {steps} 步（疑似撞上 recursion_limit）"
+def test_graph_parallel_join_flows_to_v3_precheck():
+    builder = _create_builder(with_hitl=True)
+    graph = builder.compile().get_graph()
+    edges = {(e.source, e.target) for e in graph.edges}
+    assert ("write_research_brief", "write_draft_report") in edges
+    assert ("write_research_brief", "supervisor_subgraph") in edges
+    assert ("write_draft_report", "precheck_quality_gate") in edges
+    assert ("supervisor_subgraph", "precheck_quality_gate") in edges
+    assert "accept_research" not in graph.nodes
+    assert "regenerate_research" not in graph.nodes
 
 
 # ===== 3. HITL happy path =====

@@ -126,3 +126,18 @@ claim IDs provide idempotency.
 | Durable outbox + consolidator | Implemented foundation |
 
 The table above summarizes the features present in this codebase; no separate roadmap is shipped in this repository.
+
+## Tenant isolation
+
+Account identities are resolved from server-side Bearer credentials (`DR_API_USERS_JSON`), not from client-selected headers or request bodies. `tasks.user_id` persists the owner. The Worker and Memory Outbox restore this owner before memory access; `ContextVar` scopes propagate to asynchronous graph operations and `asyncio.to_thread`.
+
+Each owner has a separate Chroma directory and episodic SQLite store under `memory/tenants/<sha256(user_id)>/`. Temporal decisions and audit rows are filtered by persisted `user_id`; claim IDs are namespaced by owner. The API enforces ownership on task history, status, SSE, report, HITL and observability records.
+
+The previous unscoped memory directory is not implicitly shared or imported into any user's store. Explicit migration of that data, if desired, must be performed under a verified owner.
+
+
+For local administrative memory maintenance, specify the trusted configured
+account with `--user` on `scripts/backfill_memory_v3.py`,
+`scripts/migrate_memory_schema.py`, or `scripts/review_temporal_relation.py`.
+Maintenance commands reject missing account selection in multi-user mode, and
+backfill filters completed task reports by the selected owner before writing.

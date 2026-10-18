@@ -160,7 +160,7 @@ def aggregate(
     run_json: dict[str, Any] = {
         "run_id": run_id,
         "task_id": task.get("thread_id"),
-        "variant": (case or {}).get("variant", "v1_baseline"),
+        "variant": (case or {}).get("variant", "baseline"),
         "generated_at": datetime.now(UTC).isoformat(),
         "environment": environment or {},
         "case": case or {},

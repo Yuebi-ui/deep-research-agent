@@ -257,14 +257,14 @@
         "description": "Human Review 审查决定。",
         "properties": {
           "action": {
-            "description": "审查动作；V2 支持结构调整 revise_draft 与定向补研 more_research",
-            "pattern": "^(approve|revise|revise_draft|more_research)$",
+            "description": "V3：approve、revise_draft、more_research",
+            "pattern": "^(approve|revise_draft|more_research)$",
             "title": "Action",
             "type": "string"
           },
           "feedback": {
             "default": "",
-            "description": "修改草稿或定向补研的具体要求；V2 专用动作限 500 字",
+            "description": "修改草稿或定向补研的具体要求；V3 限 500 字",
             "title": "Feedback",
             "type": "string"
           }

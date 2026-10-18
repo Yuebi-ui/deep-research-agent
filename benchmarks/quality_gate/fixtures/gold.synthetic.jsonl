@@ -1,0 +1,5 @@
+{"case_id":"missing_market","requires_new_evidence":true,"red_team_expected":false,"severity":"high"}
+{"case_id":"complete_low_risk","requires_new_evidence":false,"red_team_expected":false,"severity":"low"}
+{"case_id":"major_counterexample","requires_new_evidence":true,"red_team_expected":true,"severity":"critical"}
+{"case_id":"writing_only","requires_new_evidence":false,"red_team_expected":false,"severity":"low"}
+{"case_id":"high_risk_covered","requires_new_evidence":false,"red_team_expected":true,"severity":"high"}

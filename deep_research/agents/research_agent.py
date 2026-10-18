@@ -20,6 +20,8 @@ from deep_research.prompts import RESEARCH_AGENT_PROMPT, COMPRESS_RESEARCH_SYSTE
 from deep_research import logging as dr_logging
 from deep_research.memory.stage_retrieval import stage_enabled, retrieve_stage_context
 from deep_research.memory.episodes import extract_research_trace
+from deep_research.evidence import extract_search_sources
+from deep_research.tools.tool import tavily_search_with_sources
 
 logger = dr_logging.get_logger(__name__)
 
@@ -103,18 +105,27 @@ def tool_node(state: ResearcherState):
 
     # 调用工具
     observations = []
+    receipts_by_call = []
     for tool_call in tool_calls:
         tool_name = tool_call["name"]
         logger.info("Invoking tool %s with args=%s", tool_name, tool_call["args"])
         try:
-            tool = tools_by_name[tool_name]
-            result = tool.invoke(tool_call["args"])
+            if state.get("quality_gate_version") == 3 and tool_name == "tavily_search":
+                # Side-channel comes from actual provider result dictionaries.
+                # Never award V3 coverage for LLM-produced/search-body headers.
+                result, receipts = tavily_search_with_sources(**tool_call["args"])
+            else:
+                tool = tools_by_name[tool_name]
+                result = tool.invoke(tool_call["args"])
+                receipts = []
         except Exception as exc:
             # A failed search is observable and recoverable; do not elevate it
             # to a permanent lesson, or leak credentials/exception details.
             logger.warning("Research tool %s failed (%s)", tool_name, type(exc).__name__)
             result = f"[SEARCH_ERROR] Tool {tool_name} unavailable; choose a different query or source."
+            receipts = []
         observations.append(result)
+        receipts_by_call.append(receipts)
 
     # 从搜索结果中提取 URL 用于跨轮去重
     for obs in observations:
@@ -133,8 +144,11 @@ def tool_node(state: ResearcherState):
         ToolMessage(
             content=observation,
             name=tool_call["name"],
-            tool_call_id=tool_call["id"]
-        ) for observation, tool_call in zip(observations, tool_calls)
+            tool_call_id=tool_call["id"],
+            additional_kwargs=({"evidence_receipts": receipts} if
+                               state.get("quality_gate_version") == 3 and tool_call["name"] == "tavily_search"
+                               else {}),
+        ) for observation, tool_call, receipts in zip(observations, tool_calls, receipts_by_call)
     ]
 
     return {
@@ -169,6 +183,10 @@ def compress_research(state: ResearcherState) -> dict:
         "compressed_research": compressed,
         "raw_notes": ["\n".join(raw_notes)],
         "episode_trace": extract_research_trace(state, compressed),
+        "observed_sources": extract_search_sources(
+            state.get("researcher_messages", []),
+            require_receipt=state.get("quality_gate_version") == 3,
+        ),
     }
 
 # ===== ROUTING LOGIC =====

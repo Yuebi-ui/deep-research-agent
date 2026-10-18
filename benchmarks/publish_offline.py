@@ -20,11 +20,11 @@ from benchmarks.evaluate_citations import evaluate as eval_citations
 from benchmarks.evaluate_faults import evaluate as eval_faults
 
 INPUTS=[
- 'benchmarks/datasets/memory_corpus.v1.jsonl',
- 'benchmarks/datasets/memory_queries.v1.jsonl',
- 'benchmarks/datasets/research_tasks.v1.jsonl',
- 'benchmarks/datasets/fault_scenarios.v1.jsonl',
- 'benchmarks/datasets/citation_contract.v1.jsonl',
+ 'benchmarks/datasets/memory_corpus.jsonl',
+ 'benchmarks/datasets/memory_queries.jsonl',
+ 'benchmarks/datasets/research_tasks.jsonl',
+ 'benchmarks/datasets/fault_scenarios.jsonl',
+ 'benchmarks/datasets/citation_contract.jsonl',
 ]
 ENGINE=[
  'benchmarks/metrics.py',
@@ -53,7 +53,7 @@ def build_publication() -> dict[str,dict | str]:
     citations['dataset_sha256']=sha256(citation_path)
     faults=eval_faults(read_jsonl(ROOT/INPUTS[3]),[])
     manifest={
-      'result_directory':'results/offline/v1',
+      'result_directory':'results/offline/current',
       'provenance':'MEASURED_OFFLINE_ON_FICTIONAL_PUBLIC_FIXTURES',
       'origin':'computed_from_repository_code_with_no_LLM_Chroma_Redis_or_live_API_calls',
       'e2e_task_success_rate':None,
@@ -68,7 +68,7 @@ def build_publication() -> dict[str,dict | str]:
       'commands':[
         'python benchmarks/publish_offline.py',
         'python benchmarks/publish_offline.py --verify',
-        'python benchmarks/run_offline.py --output artifacts/benchmarks/offline_v1',
+        'python benchmarks/run_offline.py --output artifacts/benchmarks/offline_current',
       ],
       'limits':[
         'No Chroma embedding or live provider evaluation was executed',
@@ -92,7 +92,7 @@ def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--verify',action='store_true',help='fail if committed results differ from recomputation')
     args=p.parse_args(argv)
-    destination=ROOT/'results'/'offline'/'v1'
+    destination=ROOT/'results'/'offline'/'current'
     files=build_publication()
     mismatch=[]
     for name,content in files.items():

@@ -356,20 +356,24 @@ async def test_collector_write_failure_does_not_raise(tmp_path):
 
 
 async def test_graph_run_with_collector_matches_without(tmp_path):
-    """同一离线图，加不加 collector，最终行为必须一致。"""
+    """Collectors must not alter V3's mandatory HITL approval and report output."""
     from langgraph.checkpoint.memory import InMemorySaver
-
+    from langgraph.types import Command
     from deep_research.agent_builder import _create_builder
 
     async def run(with_collector: bool) -> str:
-        graph = _create_builder(with_hitl=False).compile(checkpointer=InMemorySaver())
+        graph = _create_builder(with_hitl=True).compile(checkpointer=InMemorySaver())
         cfg: dict = {"configurable": {"thread_id": f"t-{with_collector}"}, "recursion_limit": 60}
         if with_collector:
             cfg["callbacks"] = [_make_collector(tmp_path)]
             cfg["metadata"] = {"dr_run_id": "run-test-1"}
-        final = await graph.ainvoke(
+        await graph.ainvoke(
             {"messages": [HumanMessage(content="Compare LangGraph and CrewAI")]}, config=cfg
         )
+        paused = await graph.aget_state(cfg)
+        assert paused.next == ("human_review",)
+        final = await graph.ainvoke(Command(resume={"action": "approve"}), config=cfg)
+        assert not (await graph.aget_state(cfg)).next
         return final.get("final_report", "")
 
     without = await run(False)

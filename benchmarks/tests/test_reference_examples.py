@@ -18,7 +18,7 @@ from benchmarks.evaluate_runs import paired_deltas, read_rows
 from benchmarks.fixtures.build_full_reference_results import generate, full_summary, VARIANTS, PUBLIC_FILES
 from benchmarks.run_offline import read_jsonl
 
-D = ROOT/'results/examples/reference_v1'
+D = ROOT/'results/examples/reference'
 SOURCE = 'ILLUSTRATIVE_SYNTHETIC_EXAMPLE'
 
 class ReferenceExampleTests(unittest.TestCase):
@@ -27,7 +27,7 @@ class ReferenceExampleTests(unittest.TestCase):
         generated=generate()
         cls.runs=[json.loads(line) for line in generated['task_runs.synthetic.jsonl'].decode('utf-8').splitlines()]
         cls.faults=[json.loads(line) for line in generated['fault_observations.synthetic.jsonl'].decode('utf-8').splitlines()]
-        cls.scenarios=read_jsonl(ROOT/'benchmarks/datasets/fault_scenarios.v1.jsonl')
+        cls.scenarios=read_jsonl(ROOT/'benchmarks/datasets/fault_scenarios.jsonl')
         cls.summary=json.loads((D/'e2e_summary.synthetic.json').read_text('utf-8'))
 
     def test_four_ablation_variants_cover_same_sixty_tasks(self):

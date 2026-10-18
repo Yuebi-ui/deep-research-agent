@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-DEST=Path(__file__).resolve().parents[1]/'datasets'/'citation_contract.v1.jsonl'
+DEST=Path(__file__).resolve().parents[1]/'datasets'/'citation_contract.jsonl'
 HEADING='## \u53c2\u8003\u6587\u732e'
 BASE='The pilot documented an initial output rate.'
 

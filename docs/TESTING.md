@@ -62,7 +62,7 @@ snapshot production-ready, run at least:
 ## What tests do not prove
 
 Passing offline tests does not prove provider quality, production throughput,
-network reliability, multi-tenant data isolation or factual correctness of generated
+network reliability or factual correctness of generated
 reports.
 
 ### Public evaluation fixtures
@@ -73,3 +73,17 @@ python benchmarks/publish_offline.py --verify
 ```
 
 🔴 These reproduce lexical ranking / project RRF fusion tests and citation parser checks on fictional records. See [benchmarks](../benchmarks/README.md) and [results](../results/README.md). They are not live Chroma or provider E2E scores.
+
+### Quality Gate regression / evaluation
+
+```bash
+python scripts/test_quality_gate_v3_offline.py -q
+python scripts/test_quality_gate_v3_p1p2_offline.py -q
+python scripts/test_parallel_only_v3_offline.py -q
+APP_ENV=test pytest -q tests/test_quality_gate_v3.py
+```
+
+The three Python scripts work without LangGraph dependencies, but do not replace
+full graph/HITL/recovery tests. See [current V3 design](QUALITY_GATE.md).
+For optional case-matched human gold versus archived baseline comparisons, use
+`benchmarks/quality_gate/evaluate.py`; checked-in fixtures are SYNTHETIC only.

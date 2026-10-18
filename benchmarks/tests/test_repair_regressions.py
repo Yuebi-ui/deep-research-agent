@@ -27,7 +27,7 @@ from deep_research.benchmark.fingerprint import (
 )
 from deep_research.benchmark.preflight import Expectations, run_preflight
 
-PRESETS = json.loads((ROOT / "benchmarks/configs/runtime_ablation.v1.json").read_text("utf-8"))["variants"]
+PRESETS = json.loads((ROOT / "benchmarks/configs/runtime_ablation.json").read_text("utf-8"))["variants"]
 IDENTITY = {"provider": "fake", "model": "fake-embedding", "dimension": 4, "schema_version": 1}
 
 

@@ -23,20 +23,20 @@ sys.path.insert(0, str(REPO_ROOT))
 from deep_research.memory.sections import split_report_sections  # noqa: E402
 
 
-def iter_tasks(db_path: Path, limit: int):
+def iter_tasks(db_path: Path, limit: int, user_id: str):
     """Read tasks.db without modifying it; do not print potentially sensitive text."""
     conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
     try:
         stmt = (
             "SELECT thread_id, query, final_report FROM tasks "
             "WHERE status = 'completed' AND length(final_report) >= 100 "
-            "ORDER BY created_at ASC"
+            "AND user_id = ? ORDER BY created_at ASC"
         )
         if limit:
             stmt += " LIMIT ?"
-            cursor = conn.execute(stmt, (limit,))
+            cursor = conn.execute(stmt, (user_id, limit))
         else:
-            cursor = conn.execute(stmt)
+            cursor = conn.execute(stmt, (user_id,))
         yield from cursor
     finally:
         conn.close()
@@ -45,7 +45,8 @@ def iter_tasks(db_path: Path, limit: int):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--db", type=Path, required=True, help="Completed-task SQLite database")
-    parser.add_argument("--chroma", type=Path, help="Chroma directory; defaults to engine data dir/chroma")
+    parser.add_argument("--chroma", type=Path, help="Explicit per-user Chroma directory override")
+    parser.add_argument("--user", help="Configured account ID; required in multi-user mode")
     parser.add_argument("--limit", type=int, default=20, help="Max tasks, default 20; 0 means all")
     parser.add_argument("--apply", action="store_true", help="Write memory and call models (default read-only)")
     args = parser.parse_args(argv)
@@ -55,32 +56,39 @@ def main(argv: list[str] | None = None) -> int:
     if args.apply and os.getenv("DR_MEMORY_V3_ENABLED", "on").lower() in {"off", "0", "false"}:
         parser.error("Memory 3.0 is disabled; remove DR_MEMORY_V3_ENABLED=off before --apply")
 
+    from deep_research.memory.tenant import resolve_cli_account, memory_user_scope, tenant_memory_dir
+    try:
+        owner = resolve_cli_account(args.user)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     manager = None
     if args.apply:
         from deep_research.memory.manager import MemoryManager
         if args.chroma is None:
             from deep_research.settings import get_engine_settings
-            args.chroma = get_engine_settings().resolved_memory_data_dir / "chroma"
+            args.chroma = tenant_memory_dir(get_engine_settings().resolved_memory_data_dir, owner) / "chroma"
         manager = MemoryManager(persist_dir=str(args.chroma))
     processed = 0
     incomplete = 0
     planned_windows = 0
     try:
-        for task_id, query, report in iter_tasks(args.db, args.limit):
-            windows = len(split_report_sections(report))
-            planned_windows += windows
-            digest = hashlib.sha256(report.encode("utf-8")).hexdigest()[:10]
-            if manager is None:
-                print(f"[DRY-RUN] task={task_id} chars={len(report)} windows={windows} sha256-prefix={digest}")
-            else:
-                report_id = manager.store_from_report(query or "", report)
-                saved = manager._store.get_memory(report_id) if report_id else None
-                ok = bool(saved and saved["metadata"].get("structured_status") == "complete" and
-                          saved["metadata"].get("structured_version", 0) >= 3)
-                if not ok:
-                    incomplete += 1
-                print(f"[{'OK' if ok else 'PENDING'}] task={task_id} windows={windows}")
-            processed += 1
+        with memory_user_scope(owner):
+            for task_id, query, report in iter_tasks(args.db, args.limit, owner):
+                windows = len(split_report_sections(report))
+                planned_windows += windows
+                digest = hashlib.sha256(report.encode("utf-8")).hexdigest()[:10]
+                if manager is None:
+                    print(f"[DRY-RUN] task={task_id} chars={len(report)} windows={windows} sha256-prefix={digest}")
+                else:
+                    report_id = manager.store_from_report(query or "", report)
+                    saved = manager._store.get_memory(report_id) if report_id else None
+                    ok = bool(saved and saved["metadata"].get("structured_status") == "complete" and
+                              saved["metadata"].get("structured_version", 0) >= 3)
+                    if not ok:
+                        incomplete += 1
+                    print(f"[{'OK' if ok else 'PENDING'}] task={task_id} windows={windows}")
+                processed += 1
     except sqlite3.DatabaseError as exc:
         print(f"[ERROR] read-only tasks.db query failed: {exc}", file=sys.stderr)
         return 3

@@ -1,4 +1,4 @@
-# Server V1 Hybrid 配置模板（DashScope 云 + 本地 vLLM，**不含任何密钥**）
+# 当前架构 Hybrid 配置模板（DashScope 云 + 本地 vLLM，**不含任何密钥**）
 #
 # 用途：GPU（RTX 4090D）开启后的 Local + Cloud 混合运行配置。
 # 与 config.server.example.yml（Fake 验收专用）的区别：本文件包含完整的

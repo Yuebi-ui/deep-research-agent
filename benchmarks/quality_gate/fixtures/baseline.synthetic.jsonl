@@ -1,0 +1,5 @@
+{"case_id":"missing_market","flagged_gap":false,"targeted_research_called":false,"red_team_called":true,"human_escalated":true,"llm_calls":3,"latency_ms":1350}
+{"case_id":"complete_low_risk","flagged_gap":false,"targeted_research_called":false,"red_team_called":true,"human_escalated":true,"llm_calls":3,"latency_ms":1350}
+{"case_id":"major_counterexample","flagged_gap":true,"targeted_research_called":true,"red_team_called":true,"human_escalated":true,"llm_calls":3,"latency_ms":1420}
+{"case_id":"writing_only","flagged_gap":true,"targeted_research_called":true,"red_team_called":true,"human_escalated":true,"llm_calls":3,"latency_ms":1400}
+{"case_id":"high_risk_covered","flagged_gap":false,"targeted_research_called":false,"red_team_called":true,"human_escalated":true,"llm_calls":3,"latency_ms":1250}

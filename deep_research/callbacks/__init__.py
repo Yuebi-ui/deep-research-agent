@@ -1,3 +1,2 @@
-from deep_research.callbacks.streaming import stream_agent
+"""Active tracing and cost callbacks used by the Worker and evaluators."""
 from deep_research.callbacks.cost_tracker import CostTrackerCallback
-from deep_research.callbacks.tracer import AgentTrace, TraceEvent

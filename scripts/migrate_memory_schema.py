@@ -46,7 +46,8 @@ def _write_report(report_dict: dict, out_dir: Path) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--apply", action="store_true", help="执行迁移（默认 dry-run）")
-    parser.add_argument("--persist-dir", default=None, help="Chroma 目录（默认 data/chroma）")
+    parser.add_argument("--persist-dir", default=None, help="自定义 Chroma 目录，默认按用户隔离")
+    parser.add_argument("--user", help="维护目标用户；多用户模式必填")
     parser.add_argument("--allow-fake", action="store_true", help="允许在 fake embedding 模式下迁移（仅测试）")
     parser.add_argument("--no-backup", action="store_true", help="跳过迁移前整目录备份（不推荐）")
     parser.add_argument("--out-dir", type=Path, default=REPO_ROOT / "artifacts" / "memory_migration")
@@ -56,8 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     from deep_research.memory.migration import run_migration
     from deep_research.settings import get_engine_settings
 
+    from deep_research.memory.tenant import resolve_cli_account, tenant_memory_dir
+    try:
+        owner = resolve_cli_account(args.user)
+    except ValueError as exc:
+        parser.error(str(exc))
     persist_dir = Path(args.persist_dir) if args.persist_dir else (
-        get_engine_settings().resolved_memory_data_dir / "chroma"
+        tenant_memory_dir(get_engine_settings().resolved_memory_data_dir, owner) / "chroma"
     )
 
     embedder = EmbeddingClient()

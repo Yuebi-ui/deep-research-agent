@@ -36,19 +36,9 @@ jobs:
         run: pytest -q -m "not live"
       - name: Regenerate ignored deterministic benchmark fixtures
         run: python benchmarks/fixtures/build_public_datasets.py
-      # README.md now documents V3, but results/live/v1/manifest.json preserves
-      # a SHA-256 bound to the *historical* README. Do not rewrite old results
-      # or weaken the historical test to make a changed README hash "pass".
-      # Run every other benchmark assertion strictly, and surface the one
-      # known legacy binding separately as an explicit CI warning.
-      - name: Benchmark protocol tests (historical README hash excluded)
-        run: >-
-          pytest -q benchmarks/tests
-          --deselect=benchmarks/tests/test_readme_results.py::ReadmeResultTests::test_published_aggregates_match_root_readme
-      - name: Historical README SHA-256 binding (informational)
-        continue-on-error: true
-        run: |
-          echo "::warning::The frozen V1 manifest references an earlier README hash; V3 documentation has changed. Historical results are preserved."
-          python benchmarks/verify_readme_results.py
+      - name: Published metrics consistency
+        run: python benchmarks/verify_readme_results.py
+      - name: Benchmark protocol tests
+        run: pytest -q benchmarks/tests
       - name: Verify committed offline results
         run: python benchmarks/publish_offline.py --verify

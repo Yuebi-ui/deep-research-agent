@@ -103,6 +103,10 @@ async def _init_critical(settings) -> None:
 async def lifespan(app: FastAPI):
     """应用生命周期：启动时初始化基础设施，关闭时释放资源。"""
     settings = get_settings()
+    from backend.core.auth import validate_auth_config
+    validate_auth_config()
+    if settings.is_production and not __import__("os").getenv("DR_API_USERS_JSON", "").strip():
+        raise InfrastructureError("production API requires DR_API_USERS_JSON for authentication")
 
     # 数据目录是关键前置条件：失败直接抛出（任何环境）
     settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -167,7 +171,14 @@ async def health() -> HealthResponse:
     # 增强健康检查：报告关键组件状态
     import os
     status = {"status": "ok", "components": {}}
-    persist_dir = str(get_settings().engine.resolved_memory_data_dir / "chroma")
+    from deep_research.memory.tenant import LOCAL_USER, tenant_memory_dir
+    # Health is unauthenticated. Never enumerate tenant storage paths or query
+    # another account's collections from this endpoint. In single-user mode,
+    # inspect the exact directory that the memory runtime uses.
+    tenant_mode = bool(os.getenv("DR_API_USERS_JSON", "").strip())
+    persist_dir = (None if tenant_mode else str(
+        tenant_memory_dir(get_settings().engine.resolved_memory_data_dir, LOCAL_USER) / "chroma"
+    ))
 
     # Redis：runtime 的关键依赖（入队 + 事件通道）
     try:
@@ -179,8 +190,10 @@ async def health() -> HealthResponse:
 
     # ChromaDB check
     try:
-        if os.path.exists(persist_dir):
-            status["components"]["chromadb"] = f"ok (persist_dir: {persist_dir})"
+        if tenant_mode:
+            status["components"]["chromadb"] = "tenant_isolated"
+        elif os.path.exists(persist_dir):
+            status["components"]["chromadb"] = "ok"
         else:
             status["components"]["chromadb"] = "not_initialized"
     except Exception as e:
@@ -190,7 +203,10 @@ async def health() -> HealthResponse:
     # 旧 embedding space 的 collection 在查询时会直接失败——必须在这里显式暴露，
     # 不能等到 worker 运行期才暴露（benchmark preflight 会读这一项）。
     try:
-        if not os.path.exists(persist_dir):
+        if tenant_mode:
+            # Embedding markers are checked when each tenant collection opens.
+            status["components"]["memory_schema"] = "per_tenant_on_access"
+        elif not os.path.exists(persist_dir):
             status["components"]["memory_schema"] = "not_initialized"
         else:
             import chromadb

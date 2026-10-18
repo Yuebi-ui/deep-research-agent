@@ -311,7 +311,7 @@ def _run_checks(expectations: Expectations, probes: Any) -> tuple[list[Check], d
         from deep_research.benchmark.fingerprint import MEMORY_FLAG_DEFAULTS, resolved_memory_flags
 
         name = expectations.memory_preset
-        preset_file = Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.v1.json"
+        preset_file = Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.json"
         presets = json.loads(preset_file.read_text(encoding="utf-8"))["variants"]
         if name not in presets:
             raise ValueError(f"Unknown memory ablation preset: {name}")

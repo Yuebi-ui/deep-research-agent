@@ -34,11 +34,11 @@ class TaskRepository(Protocol):
     尚未存在也未测试的后端提前编写实现（执行包 §0.5.4 第 11 条）。
     """
 
-    def create(self, thread_id: str, query: str) -> ResearchTask: ...
+    def create(self, thread_id: str, query: str, *, user_id: str = "local") -> ResearchTask: ...
 
     def get(self, thread_id: str) -> ResearchTask | None: ...
 
-    def list_tasks(self, *, include_deleted: bool = False) -> list[ResearchTask]: ...
+    def list_tasks(self, *, include_deleted: bool = False, user_id: str | None = None) -> list[ResearchTask]: ...
 
     def save(self, task: ResearchTask) -> ResearchTask: ...
 
@@ -46,11 +46,12 @@ class TaskRepository(Protocol):
 class SqlAlchemyTaskRepository:
     """基于 SQLAlchemy 2.x 的实现（SQLite）。"""
 
-    def create(self, thread_id: str, query: str) -> ResearchTask:
+    def create(self, thread_id: str, query: str, *, user_id: str = "local") -> ResearchTask:
         now = datetime.now()
         task = ResearchTask(
             thread_id=thread_id,
             query=query,
+            user_id=user_id,
             status="pending",
             stage="",
             draft_report="",
@@ -75,8 +76,10 @@ class SqlAlchemyTaskRepository:
             session.expunge(task)
             return task
 
-    def list_tasks(self, *, include_deleted: bool = False) -> list[ResearchTask]:
+    def list_tasks(self, *, include_deleted: bool = False, user_id: str | None = None) -> list[ResearchTask]:
         stmt = select(ResearchTask)
+        if user_id is not None:
+            stmt = stmt.where(ResearchTask.user_id == user_id)
         if not include_deleted:
             # 与改造前一致：历史列表默认过滤软删除的任务
             stmt = stmt.where(ResearchTask.status != "deleted")

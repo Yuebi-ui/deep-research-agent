@@ -35,7 +35,7 @@ def evaluate(rows: list[dict]) -> tuple[dict,list[dict]]:
 
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--cases',type=Path,default=ROOT/'benchmarks'/'datasets'/'citation_contract.v1.jsonl')
+    p.add_argument('--cases',type=Path,default=ROOT/'benchmarks'/'datasets'/'citation_contract.jsonl')
     p.add_argument('--output',type=Path,default=ROOT/'artifacts'/'benchmarks'/'citation_contract.json')
     args=p.parse_args(argv)
     summary,details=evaluate(read_jsonl(args.cases))

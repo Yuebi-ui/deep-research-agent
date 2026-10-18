@@ -139,7 +139,7 @@ class RunContext:
     run_id: str
     task_id: str
     attempt: int = 0
-    variant: str = "v1_baseline"
+    variant: str = "baseline"
     worker_id: str = ""
 
     def to_fields(self) -> dict[str, Any]:
@@ -193,7 +193,7 @@ def append_reliability_event(
         row = {
             "run_id": run_id,
             "task_id": task_id,
-            "variant": "v1_baseline",
+            "variant": "baseline",
             "attempt": attempt,
             "worker_id": worker_id,
             "event": event,

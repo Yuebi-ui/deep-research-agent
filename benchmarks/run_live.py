@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--base-url', default='http://127.0.0.1:8000')
     parser.add_argument('--variant', required=True)
     parser.add_argument('--provider-kind', choices=['fake', 'live'], default='fake')
-    parser.add_argument('--tasks', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'research_tasks.v1.jsonl')
+    parser.add_argument('--tasks', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'research_tasks.jsonl')
     parser.add_argument('--limit', type=int, default=1)
     parser.add_argument('--poll-seconds', type=float, default=3)
     parser.add_argument('--timeout-seconds', type=float, default=1800)

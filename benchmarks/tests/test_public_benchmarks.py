@@ -27,11 +27,11 @@ class PublicBenchmarkTests(unittest.TestCase):
     def setUpClass(cls):
         from benchmarks.fixtures.build_public_datasets import build
         build()  # deterministic local fixtures, ignored by Git
-        cls.corpus=read_jsonl(DATA/'memory_corpus.v1.jsonl')
-        cls.queries=read_jsonl(DATA/'memory_queries.v1.jsonl')
-        cls.tasks=read_jsonl(DATA/'research_tasks.v1.jsonl')
-        cls.faults=read_jsonl(DATA/'fault_scenarios.v1.jsonl')
-        cls.citations=read_jsonl(DATA/'citation_contract.v1.jsonl')
+        cls.corpus=read_jsonl(DATA/'memory_corpus.jsonl')
+        cls.queries=read_jsonl(DATA/'memory_queries.jsonl')
+        cls.tasks=read_jsonl(DATA/'research_tasks.jsonl')
+        cls.faults=read_jsonl(DATA/'fault_scenarios.jsonl')
+        cls.citations=read_jsonl(DATA/'citation_contract.jsonl')
 
     def test_fixed_dataset_sizes(self):
         self.assertEqual((len(self.corpus),len(self.queries),len(self.tasks),len(self.faults),len(self.citations)),
@@ -176,7 +176,7 @@ class PublicBenchmarkTests(unittest.TestCase):
 
     def test_committed_offline_results_match_computation(self):
         for name,content in build_publication().items():
-            self.assertEqual((ROOT/'results'/'offline'/'v1'/name).read_text('utf-8'),canonical(content))
+            self.assertEqual((ROOT/'results'/'offline'/'current'/name).read_text('utf-8'),canonical(content))
 
     def test_live_requires_opt_in_before_http(self):
         proc=subprocess.run([sys.executable,str(ROOT/'benchmarks'/'run_live.py'),

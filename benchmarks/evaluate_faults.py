@@ -66,7 +66,7 @@ def evaluate(scenarios: list[dict], observations: list[dict]) -> dict:
 
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--scenarios',type=Path,default=Path(__file__).parent/'datasets'/'fault_scenarios.v1.jsonl')
+    p.add_argument('--scenarios',type=Path,default=Path(__file__).parent/'datasets'/'fault_scenarios.jsonl')
     p.add_argument('--observations',type=Path,default=None)
     p.add_argument('--output',type=Path,default=Path(__file__).resolve().parents[1]/'artifacts'/'benchmarks'/'faults.json')
     args=p.parse_args(argv)

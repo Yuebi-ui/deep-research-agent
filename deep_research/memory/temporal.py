@@ -20,6 +20,7 @@ from deep_research.memory.retrieval import (
     valid_interval,
 )
 from deep_research.memory.schemas import Contradiction, MemoryClaim
+from deep_research.memory.tenant import current_user_id
 
 _ALLOWED = {"confirmed_change", "confirmed_conflict", "dismissed"}
 
@@ -52,7 +53,7 @@ class TemporalReviewLedger:
     def get(self, relation_id: str) -> ReviewedRelation | None:
         with session_scope() as session:
             row = session.get(MemoryTemporalDecision, relation_id)
-            return self._result(row) if row else None
+            return self._result(row) if row and row.user_id == current_user_id() else None
 
     def for_claims(self, claim_ids: set[str], limit: int = 100) -> list[ReviewedRelation]:
         if not claim_ids:
@@ -64,7 +65,8 @@ class TemporalReviewLedger:
         with session_scope() as session:
             for start in range(0, len(refs), 250):
                 page = refs[start:start + 250]
-                records = session.scalars(select(MemoryTemporalDecision).where(or_(
+                records = session.scalars(select(MemoryTemporalDecision).where(
+                    MemoryTemporalDecision.user_id == current_user_id(), or_(
                     MemoryTemporalDecision.claim_a_id.in_(page),
                     MemoryTemporalDecision.claim_b_id.in_(page),
                 )).order_by(MemoryTemporalDecision.reviewed_at.desc())
@@ -78,6 +80,7 @@ class TemporalReviewLedger:
         with session_scope() as session:
             rows = session.scalars(select(MemoryTemporalAudit).where(
                 MemoryTemporalAudit.relation_id == relation_id,
+                MemoryTemporalAudit.user_id == current_user_id(),
             ).order_by(MemoryTemporalAudit.id)).all()
             return [dict(prior_decision=row.prior_decision, decision=row.decision,
                          reviewer=row.reviewer, rationale=row.rationale,
@@ -129,6 +132,8 @@ class TemporalReviewLedger:
         explanation = rationale.strip()[:4000]
         with session_scope() as session:
             prior = session.get(MemoryTemporalDecision, relation.id)
+            if prior and prior.user_id != current_user_id():
+                raise ValueError("temporal relation belongs to a different user")
             if prior and (prior.claim_a_id != relation.claim_a_id or
                           prior.claim_b_id != relation.claim_b_id):
                 raise ValueError("relation ID has conflicting claim references")
@@ -137,12 +142,13 @@ class TemporalReviewLedger:
                     prior.rationale == explanation):
                 return self._result(prior)  # idempotent review replay
             session.add(MemoryTemporalAudit(
-                relation_id=relation.id, prior_decision=prior.decision if prior else None,
+                relation_id=relation.id, user_id=current_user_id(), prior_decision=prior.decision if prior else None,
                 decision=decision, reviewer=actor, rationale=explanation, reviewed_at=now,
             ))
             if prior is None:
                 prior = MemoryTemporalDecision(
-                    relation_id=relation.id, claim_a_id=relation.claim_a_id,
+                    relation_id=relation.id, user_id=current_user_id(),
+                    claim_a_id=relation.claim_a_id,
                     claim_b_id=relation.claim_b_id, decision=decision,
                     older_claim_id=older, newer_claim_id=newer, reviewer=actor,
                     rationale=explanation, reviewed_at=now,
