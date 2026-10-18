@@ -20,7 +20,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from backend.core.auth import authenticated_user
 from fastapi.responses import StreamingResponse
 
 from backend.db import get_repository
@@ -57,9 +58,9 @@ router = APIRouter(prefix="/api/research", tags=["research"])
 # ===== 内部工具 =====
 
 
-def _get_task_or_404(thread_id: str) -> Any:
+def _get_task_or_404(thread_id: str, user_id: str) -> Any:
     task = get_repository().get(thread_id)
-    if task is None:
+    if task is None or task.user_id != user_id:
         raise ApiError(CODE_TASK_NOT_FOUND, "任务不存在", status_code=404)
     return task
 
@@ -110,7 +111,7 @@ async def _stamp_run_id(thread_id: str, run_id: str) -> None:
 
 
 @router.post("/start", response_model=TaskCreatedResponse)
-async def start_research(req: ResearchRequest):
+async def start_research(req: ResearchRequest, user_id: str = Depends(authenticated_user)):
     """创建任务并入队，**立即返回**，不等待研究完成。
 
     前端流程不变：拿到 thread_id 后再去订阅 /stream 获取进度。
@@ -118,7 +119,7 @@ async def start_research(req: ResearchRequest):
     import uuid
 
     thread_id = uuid.uuid4().hex[:12]
-    task = get_repository().create(thread_id, req.query)
+    task = get_repository().create(thread_id, req.query, user_id=user_id)
 
     if req.run_id:
         # 先写 run_id 再入队：保证 worker 认领前就能读到（观测用）
@@ -134,7 +135,7 @@ async def start_research(req: ResearchRequest):
 
 
 @router.post("/{thread_id}/resume", response_model=ReviewResponse)
-async def resume_research(thread_id: str, review: ReviewAction):
+async def resume_research(thread_id: str, review: ReviewAction, user_id: str = Depends(authenticated_user)):
     """提交 HITL 审查决定。
 
     审查决定**落库**（不再用短 TTL 的 Redis 键或内存 dict）——否则 API 重启
@@ -142,17 +143,15 @@ async def resume_research(thread_id: str, review: ReviewAction):
 
     API **不**驱动 graph resume；它只入队，由 worker 执行。
     """
-    task = _get_task_or_404(thread_id)
+    task = _get_task_or_404(thread_id, user_id)
 
     # 只有 WAITING_REVIEW 可以接受审查决定（Phase D 已建立，保留）
     if coerce_status(task.status) is not TaskStatus.WAITING_REVIEW:
         raise InvalidReviewState(coerce_status(task.status))
-    # API never opens checkpoints; the worker projects V2 review capability into
-    # ``task.stage`` when emitting WAITING_REVIEW. Old V0/V1 jobs stay safe.
-    if review.action in ("revise_draft", "more_research") and task.stage != "human_review_v2":
+    if task.stage != "human_review_v3":
         raise ApiError(
             CODE_REVIEW_NOT_ALLOWED,
-            "此审查动作只适用于 Quality Gate V2；旧任务请使用 approve/revise",
+            "该任务不是 V3 审核任务；旧版待审任务需先归档或使用旧部署完成",
             status_code=409,
         )
 
@@ -161,11 +160,11 @@ async def resume_research(thread_id: str, review: ReviewAction):
     # 状态先回到 RUNNING，表示"已受理、待执行"
     task.status = TaskStatus.RUNNING.value
     # Stage here is a task projection only; Graph routes from its checkpoint.
-    task.stage = (
-        {"approve": "claim_verification", "revise_draft": "evaluate_research",
-         "more_research": "targeted_research"}.get(review.action, "supervisor_subgraph")
-        if task.stage == "human_review_v2" else "supervisor_subgraph"
-    )
+    task.stage = {
+        "approve": "claim_verification",
+        "revise_draft": "precheck_quality_gate",
+        "more_research": "targeted_research",
+    }[review.action]
     from datetime import datetime
 
     task.updated_at = datetime.now()
@@ -177,7 +176,7 @@ async def resume_research(thread_id: str, review: ReviewAction):
 
 
 @router.post("/{thread_id}/cancel", response_model=CancelResponse)
-async def cancel_research(thread_id: str):
+async def cancel_research(thread_id: str, user_id: str = Depends(authenticated_user)):
     """请求取消任务。
 
     语义是**协作式**的：`RUNNING` 任务只是置标志，worker 在下一个事件边界
@@ -186,7 +185,7 @@ async def cancel_research(thread_id: str):
     """
     from datetime import datetime
 
-    task = _get_task_or_404(thread_id)
+    task = _get_task_or_404(thread_id, user_id)
     current = coerce_status(task.status)
 
     # 已取消 → 幂等返回（§26 要求 test_cancel_is_idempotent）。
@@ -231,13 +230,13 @@ async def cancel_research(thread_id: str):
 
 
 @router.get("/{thread_id}/stream")
-async def stream_research(thread_id: str, request: Request):
+async def stream_research(thread_id: str, request: Request, user_id: str = Depends(authenticated_user)):
     """SSE 事件投影。
 
     **只观察，不驱动**：读 Redis Stream + DB，不构建 LangGraph，
     不写任务状态。客户端断开只结束本次投影，不影响 worker。
     """
-    _get_task_or_404(thread_id)
+    _get_task_or_404(thread_id, user_id)
 
     last_event_id = request.headers.get("Last-Event-ID") or request.query_params.get("last_event_id")
 
@@ -274,28 +273,28 @@ async def stream_research(thread_id: str, request: Request):
 
 
 @router.get("/{thread_id}/events")
-async def task_events(thread_id: str, request: Request):
+async def task_events(thread_id: str, request: Request, user_id: str = Depends(authenticated_user)):
     """`/stream` 的别名（§14 允许的新路径），语义完全相同。"""
-    return await stream_research(thread_id, request)
+    return await stream_research(thread_id, request, user_id)
 
 
 # ===== 查询 =====
 
 
 @router.get("/{thread_id}/status", response_model=TaskSummaryResponse)
-async def get_research_status(thread_id: str):
-    task = _get_task_or_404(thread_id)
+async def get_research_status(thread_id: str, user_id: str = Depends(authenticated_user)):
+    task = _get_task_or_404(thread_id, user_id)
     return _task_summary(task)
 
 
 @router.get("/{thread_id}/report", response_model=ReportResponse)
-async def get_research_report(thread_id: str):
+async def get_research_report(thread_id: str, user_id: str = Depends(authenticated_user)):
     """读取最终报告。
 
     **直接读 DB**，不再经 graph 读 checkpoint state——数据库是业务事实源
     （设计文档 §16）。
     """
-    task = _get_task_or_404(thread_id)
+    task = _get_task_or_404(thread_id, user_id)
     if not task.final_report:
         raise HTTPException(status_code=404, detail="Report not found or task not completed")
     return {
@@ -308,16 +307,16 @@ async def get_research_report(thread_id: str):
 
 
 @router.get("/history/list", response_model=list[TaskListItem])
-async def get_history():
-    return [t.to_list_item() for t in get_repository().list_tasks()]
+async def get_history(user_id: str = Depends(authenticated_user)):
+    return [t.to_list_item() for t in get_repository().list_tasks(user_id=user_id)]
 
 
 @router.delete("/{thread_id}", response_model=DeleteResponse)
-async def delete_research_task(thread_id: str):
+async def delete_research_task(thread_id: str, user_id: str = Depends(authenticated_user)):
     """软删除。"""
     from datetime import datetime
 
-    task = _get_task_or_404(thread_id)
+    task = _get_task_or_404(thread_id, user_id)
     try:
         current = coerce_status(task.status)
     except UnknownTaskStatus:

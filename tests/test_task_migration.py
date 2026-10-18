@@ -116,6 +116,12 @@ def test_empty_database_upgrade_head(tmp_path):
             "cancel_requested", "cancel_requested_at"} <= set(cols)
     assert cols["attempt"]["notnull"] == 1
     assert cols["cancel_requested"]["notnull"] == 1
+    assert cols["user_id"]["notnull"] == 1
+    assert "local" in str(cols["user_id"]["dflt_value"])
+    with sqlite3.connect(db) as conn:
+        for table in ("memory_temporal_decisions", "memory_temporal_audit"):
+            names = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+            assert "user_id" in names
 
 
 def test_upgrade_head_is_idempotent(tmp_path):
@@ -191,6 +197,7 @@ def test_migration_preserves_every_field(tmp_path):
     assert rows["bbb2"]["verification"] == '{"total_claims": 10}'
     assert rows["ccc3"]["status"] == "deleted"
     assert rows["aaa1"]["created_at"] == "2026-01-01T00:00:00.000000"
+    assert all(row["user_id"] == "local" for row in rows.values())
 
 
 def test_migration_rejects_unexpected_schema(tmp_path):

@@ -135,14 +135,20 @@ def active_generation(state: Mapping[str, Any] | None) -> int:
 
 
 def build_speculative_payload(
-    *, generation: int, research_brief: str, notes: list[str]
+    *, generation: int, research_brief: str, notes: list[str],
+    evidence_records: list[dict[str, Any]] | None = None,
+    checklist_fingerprint: str | None = None,
 ) -> dict[str, Any]:
     """构造隔离的投机研究结果（带 generation 标签，可被 fence 校验）。"""
-    return {
+    payload = {
         "generation": int(generation),
         "seed_fingerprint": seed_fingerprint(build_research_seed(research_brief)),
         "notes": list(notes),
     }
+    if evidence_records is not None:
+        payload["evidence_records"] = [dict(item) for item in evidence_records]
+        payload["checklist_fingerprint"] = checklist_fingerprint
+    return payload
 
 
 def quarantine_update(state: Mapping[str, Any] | None, final_notes: list[str]) -> dict[str, Any]:
@@ -157,6 +163,9 @@ def quarantine_update(state: Mapping[str, Any] | None, final_notes: list[str]) -
             generation=active_generation(state),
             research_brief=(state or {}).get("research_brief", "") or "",
             notes=final_notes,
+            **({"evidence_records": list((state or {}).get("research_evidence") or []),
+                "checklist_fingerprint": (state or {}).get("checklist_fingerprint")}
+               if (state or {}).get("quality_gate_version") == 3 else {}),
         )
     }
 

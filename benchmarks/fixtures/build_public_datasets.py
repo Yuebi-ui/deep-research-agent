@@ -226,10 +226,10 @@ def build():
                 'expected_no_duplicate_write':True,'run_status':'planned_not_executed',
                 'observed_recovered':None,'recovery_seconds':None})
     assert len(faults)==40
-    dump_jsonl(ROOT/'memory_corpus.v1.jsonl', corpus)
-    dump_jsonl(ROOT/'memory_queries.v1.jsonl', queries)
-    dump_jsonl(ROOT/'research_tasks.v1.jsonl', tasks)
-    dump_jsonl(ROOT/'fault_scenarios.v1.jsonl', faults)
+    dump_jsonl(ROOT/'memory_corpus.jsonl', corpus)
+    dump_jsonl(ROOT/'memory_queries.jsonl', queries)
+    dump_jsonl(ROOT/'research_tasks.jsonl', tasks)
+    dump_jsonl(ROOT/'fault_scenarios.jsonl', faults)
     return {'memory_documents':len(corpus),'memory_queries':len(queries),
             'research_tasks':len(tasks),'fault_scenarios':len(faults)}
 

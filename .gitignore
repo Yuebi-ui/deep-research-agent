@@ -49,8 +49,8 @@ memory3-offline-*/
 offline-memory-*/
 
 # Locally regenerated large benchmark fixtures / raw per-item details
-benchmarks/datasets/memory_corpus.v1.jsonl
-benchmarks/datasets/memory_queries.v1.jsonl
+benchmarks/datasets/memory_corpus.jsonl
+benchmarks/datasets/memory_queries.jsonl
 results/offline/**/retrieval_per_query.jsonl
 results/examples/**/task_runs.synthetic.jsonl
 results/examples/**/fault_observations.synthetic.jsonl

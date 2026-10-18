@@ -89,7 +89,7 @@ def _put_waiting_review(repo, tid: str, draft: str = "# 草稿") -> None:
     """
     task = repo.get(tid)
     task.status = TaskStatus.WAITING_REVIEW.value
-    task.stage = "human_review"
+    task.stage = "human_review_v3"
     task.draft_report = draft
     repo.save(task)
 
@@ -139,12 +139,32 @@ def test_review_persists_feedback(api):
     tid = _create(client)
     _put_waiting_review(repo, tid)
 
-    client.post(f"/api/research/{tid}/resume",
-                json={"action": "revise", "feedback": "补充数据来源"})
+    response = client.post(f"/api/research/{tid}/resume",
+                           json={"action": "revise_draft", "feedback": "补充数据来源"})
+    assert response.status_code == 200, response.text
 
     review = repo.latest_review(tid)
-    assert review.action == "revise"
+    assert review.action == "revise_draft"
     assert review.feedback == "补充数据来源"
+
+
+def test_review_rejects_noncurrent_stage(api):
+    """旧审核阶段不能绕过当前的版本门控。"""
+    client, enqueued, repo, _route = api
+    tid = _create(client)
+    _put_waiting_review(repo, tid)
+    task = repo.get(tid)
+    task.stage = "human_review"
+    repo.save(task)
+    enqueued.clear()
+
+    response = client.post(
+        f"/api/research/{tid}/resume",
+        json={"action": "approve", "feedback": ""},
+    )
+    assert response.status_code == 409
+    assert repo.latest_review(tid) is None
+    assert enqueued == []
 
 
 def test_review_on_pending_task_is_rejected(api):

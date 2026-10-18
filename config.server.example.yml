@@ -1,4 +1,4 @@
-# Server V1 配置模板（**不含任何密钥**）
+# 当前架构 配置模板（**不含任何密钥**）
 #
 # 用法：
 #     cp config.server.example.yml config.yml
@@ -47,7 +47,7 @@ stages:
 
     # ---- 任务持久化：SQLite ----
     #
-    # Server V1 正式支持并测试的唯一 Task DB。
+    # 当前架构 正式支持并测试的唯一 Task DB。
     # path 为相对路径时按**项目根目录**解析，不依赖进程 cwd。
     database:
       backend: sqlite

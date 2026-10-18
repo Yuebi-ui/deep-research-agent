@@ -140,11 +140,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--collection', default='memory_sections', help='Existing section collection to search')
     parser.add_argument('--provider-kind', choices=['fake', 'live'], default='fake')
     parser.add_argument('--confirm-embedding-spend', action='store_true')
-    parser.add_argument('--queries', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'memory_queries.v1.jsonl')
+    parser.add_argument('--queries', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'memory_queries.jsonl')
     parser.add_argument('--k', type=int, default=10)
     parser.add_argument('--import-fixture', action='store_true', help='Import synthetic corpus into an isolated benchmark collection')
     parser.add_argument('--confirm-write-fixtures', action='store_true')
-    parser.add_argument('--corpus', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'memory_corpus.v1.jsonl')
+    parser.add_argument('--corpus', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'memory_corpus.jsonl')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'benchmarks' / 'chroma_retrieval')
     args = parser.parse_args(argv)
     if args.provider_kind == 'live' and not args.confirm_embedding_spend:

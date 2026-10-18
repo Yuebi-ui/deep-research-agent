@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Server V1 Fake Runtime 验收。
+# 当前架构 Fake Runtime 验收。
 #
 #     bash scripts/autodl/accept_fake_runtime.sh
 #
@@ -46,7 +46,7 @@ redis-cli -h 127.0.0.1 -p 6379 MODULE LIST 2>/dev/null | grep -qiE "search" \
 ok "API / Worker / Redis Stack 均已就绪"
 
 "$PY" - <<'PY' || die "验收脚本执行失败"
-"""Server V1 Fake Runtime 验收（在服务器上直接跑）。"""
+"""当前架构 Fake Runtime 验收（在服务器上直接跑）。"""
 from __future__ import annotations
 
 import json

@@ -1,0 +1,66 @@
+{
+  "additional_reported_ci": {
+    "main_result_paragraph_95_pp": [
+      1.7,
+      14.4
+    ],
+    "main_result_paragraph_effect_pp": 7.8,
+    "source_location": "README.md / line containing Paired Reviewed Success Improvement"
+  },
+  "ci_consistency_note": "Reviewed Success delta and paired 95% CI are consistent across the overview and ablation table.",
+  "comparison_basis": "same task_id; task-cluster bootstrap as reported in README",
+  "data_origin": "project_reported_measurements",
+  "pairs": {
+    "report_section_memory": {
+      "baseline": "memory_off",
+      "candidate": "report_section_memory",
+      "completion_after": 0.944,
+      "completion_before": 0.933,
+      "matched_run_pairs": null,
+      "matched_task_count": null,
+      "paired_ci_95_pp": [
+        -1.7,
+        8.3
+      ],
+      "paired_trials": null,
+      "reviewed_success_after": 0.811,
+      "reviewed_success_before": 0.778,
+      "reviewed_success_delta_pp": 3.3
+    },
+    "stage_plus_episodic": {
+      "baseline": "memory_off",
+      "candidate": "stage_plus_episodic",
+      "completion_after": 0.961,
+      "completion_before": 0.933,
+      "matched_run_pairs": null,
+      "matched_task_count": null,
+      "paired_ci_95_pp": [
+        1.7,
+        14.4
+      ],
+      "paired_trials": null,
+      "reviewed_success_after": 0.856,
+      "reviewed_success_before": 0.778,
+      "reviewed_success_delta_pp": 7.8
+    },
+    "stage_recall": {
+      "baseline": "memory_off",
+      "candidate": "stage_recall",
+      "completion_after": 0.95,
+      "completion_before": 0.933,
+      "matched_run_pairs": null,
+      "matched_task_count": null,
+      "paired_ci_95_pp": [
+        -0.6,
+        11.7
+      ],
+      "paired_trials": null,
+      "reviewed_success_after": 0.833,
+      "reviewed_success_before": 0.778,
+      "reviewed_success_delta_pp": 5.6
+    }
+  },
+  "raw_paired_runs_in_archive": false,
+  "result_kind": "README_REPORTED_REAL_RUNTIME",
+  "source_document": "README.md / 消融分析与统计可信度"
+}

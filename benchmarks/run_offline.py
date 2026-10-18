@@ -41,8 +41,8 @@ def run(corpus_file: Path, query_file: Path) -> tuple[dict, list[dict]]:
     # The expanded fixtures are intentionally not tracked. Regenerate them
     # from the public deterministic generator when requested.
     if not corpus_file.exists() or not query_file.exists():
-        if (corpus_file.resolve() == (DATASETS/'memory_corpus.v1.jsonl').resolve()
-                and query_file.resolve() == (DATASETS/'memory_queries.v1.jsonl').resolve()):
+        if (corpus_file.resolve() == (DATASETS/'memory_corpus.jsonl').resolve()
+                and query_file.resolve() == (DATASETS/'memory_queries.jsonl').resolve()):
             from benchmarks.fixtures.build_public_datasets import build
             build()
         else:
@@ -94,8 +94,8 @@ def run(corpus_file: Path, query_file: Path) -> tuple[dict, list[dict]]:
 
 def main(argv: list[str] | None=None) -> int:
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--corpus', type=Path, default=DATASETS/'memory_corpus.v1.jsonl')
-    parser.add_argument('--queries', type=Path, default=DATASETS/'memory_queries.v1.jsonl')
+    parser.add_argument('--corpus', type=Path, default=DATASETS/'memory_corpus.jsonl')
+    parser.add_argument('--queries', type=Path, default=DATASETS/'memory_queries.jsonl')
     parser.add_argument('--output', type=Path, default=ROOT/'artifacts'/'benchmarks'/'offline_fixture')
     args=parser.parse_args(argv)
     summary, rows=run(args.corpus, args.queries)

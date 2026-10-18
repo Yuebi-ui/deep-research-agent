@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from backend.core.auth import authenticated_user
+from backend.db import get_repository
+from backend.core.api_errors import ApiError, CODE_TASK_NOT_FOUND
 
 from backend.core.settings import get_settings
 from backend.schemas.responses import (
@@ -36,6 +39,17 @@ def _cost_path() -> str:
     return os.path.join(_data_dir(), "cost_log.jsonl")
 
 
+def _require_owner(thread_id: str, user_id: str) -> None:
+    task = get_repository().get(thread_id)
+    if task is None or task.user_id != user_id:
+        raise ApiError(CODE_TASK_NOT_FOUND, "任务不存在", status_code=404)
+
+
+def _owner_records(records: list[dict], user_id: str) -> list[dict]:
+    allowed = {t.thread_id for t in get_repository().list_tasks(user_id=user_id)}
+    return [row for row in records if row.get("thread_id") in allowed]
+
+
 def _read_jsonl(path: str) -> list[dict]:
     if not os.path.exists(path):
         return []
@@ -52,7 +66,8 @@ def _read_jsonl(path: str) -> list[dict]:
 
 
 @router.get("/trace/{thread_id}", response_model=TraceGraphResponse)
-async def get_trace(thread_id: str):
+async def get_trace(thread_id: str, user_id: str = Depends(authenticated_user)):
+    _require_owner(thread_id, user_id)
     """返回指定任务的 Agent 执行轨迹（节点树 + 工具调用）。"""
     events = _read_jsonl(_trace_path())
     # 按 thread_id 过滤
@@ -61,7 +76,8 @@ async def get_trace(thread_id: str):
 
 
 @router.get("/cost/{thread_id}", response_model=CostDetailResponse)
-async def get_cost(thread_id: str):
+async def get_cost(thread_id: str, user_id: str = Depends(authenticated_user)):
+    _require_owner(thread_id, user_id)
     """返回指定任务的 Token 消耗和成本。"""
     records = _read_jsonl(_cost_path())
     # 按 thread_id 过滤
@@ -92,10 +108,10 @@ async def get_cost(thread_id: str):
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats():
+async def get_stats(user_id: str = Depends(authenticated_user)):
     """返回全局统计摘要 + 幻觉率趋势。"""
-    records = _read_jsonl(_cost_path())
-    trace_events = _read_jsonl(_trace_path())
+    records = _owner_records(_read_jsonl(_cost_path()), user_id)
+    trace_events = _owner_records(_read_jsonl(_trace_path()), user_id)
 
     total_input = sum(r.get("input_tokens", 0) for r in records)
     total_output = sum(r.get("output_tokens", 0) for r in records)
@@ -139,10 +155,10 @@ async def get_stats():
 
 
 @router.get("/alerts", response_model=AlertsResponse)
-async def get_alerts():
+async def get_alerts(user_id: str = Depends(authenticated_user)):
     """返回当前质量告警。"""
-    records = _read_jsonl(_cost_path())
-    trace_events = _read_jsonl(_trace_path())
+    records = _owner_records(_read_jsonl(_cost_path()), user_id)
+    trace_events = _owner_records(_read_jsonl(_trace_path()), user_id)
 
     alerts: list[dict] = []
 

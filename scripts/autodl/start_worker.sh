@@ -25,7 +25,7 @@ info "APP_ENV=${APP_ENV}  CHECKPOINTER_BACKEND=${CHECKPOINTER_BACKEND}"
 
 if [ "${CHECKPOINTER_BACKEND}" = "memory" ]; then
   die "CHECKPOINTER_BACKEND=memory 不被 Worker 接受。
-跨进程恢复是 Server V1 的核心能力，用 memory 会让它失效。
+跨进程恢复是 当前架构 的核心能力，用 memory 会让它失效。
 请改为 redis（或 sqlite）。"
 fi
 

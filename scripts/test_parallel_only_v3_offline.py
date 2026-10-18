@@ -19,7 +19,6 @@ sys.path.insert(0, str(ROOT))
 
 from deep_research import research_seed as seed
 from deep_research import quality_gate as gate
-from scripts.test_quality_gate_v2_offline import extract_actual_builder
 
 
 class FakeHumanMessage:
@@ -84,53 +83,76 @@ class ParallelOnlyTests(unittest.TestCase):
             with self.subTest(raw=raw), patch.dict(os.environ, {seed.SEED_LITE_ENV: raw}):
                 self.assertTrue(seed.seed_lite_speculative_enabled())
 
-    def test_only_parallel_graphs_for_all_versions_and_hitl_modes(self):
-        build = extract_actual_builder()
-        for version, hitl in product((0, 1, 2), (True, False)):
-            with self.subTest(version=version, hitl=hitl):
-                g = build(with_hitl=hitl, quality_gate_version=version)
-                edges = set(g.edges)
-                self.assertIn(('write_research_brief', 'write_draft_report'), edges)
-                self.assertIn(('write_research_brief', 'supervisor_subgraph'), edges)
-                self.assertNotIn(('write_draft_report', 'supervisor_subgraph'), edges)
-                self.assertNotIn(('supervisor_subgraph', 'claim_verification'), edges)
-                join = (('write_draft_report', 'supervisor_subgraph'),
-                        'evaluate_research' if version >= 1 else ('human_review' if hitl else 'accept_research'))
-                self.assertIn(join, edges)
-                if version == 2:
-                    self.assertIn(('targeted_research', 'evaluate_research'), edges)
-                self.assertIn(('claim_verification', 'final_report_generation'), edges)
-        with self.assertRaisesRegex(ValueError, 'serial graph was removed'):
-            build(with_hitl=True, speculative=False, quality_gate_version=2)
+    def test_v3_only_graph_rejects_old_versions(self):
+        src = (ROOT / 'deep_research/agent_builder.py').read_text()
+        tree = ast.parse(src)
+        node = next(x for x in tree.body if isinstance(x, ast.FunctionDef)
+                    and x.name == '_create_builder')
+        class FakeGraph:
+            def __init__(self, *_args, **_kwargs):
+                self.edges, self.nodes = [], {}
+            def add_edge(self, a, b):
+                self.edges.append((tuple(a) if isinstance(a, list) else a, b))
+            def add_node(self, key, fn):
+                self.nodes[key] = fn
+        names = ('write_research_brief', 'write_draft_report', 'supervisor_agent',
+                 'precheck_quality_gate', 'evaluate_research', 'red_team_review',
+                 'route_quality_gate_v3', 'targeted_research', 'human_review',
+                 'claim_verification', 'final_report_generation', 'quality_gate_failed')
+        space = {x: lambda *a, **k: None for x in names}
+        space.update(StateGraph=FakeGraph, AgentState=dict, AgentInputState=dict,
+                     START='start', END='end', QUALITY_GATE_VERSION=3)
+        exec(compile(ast.Module(body=[node], type_ignores=[]), '<v3>', 'exec'), space)
+        build = space['_create_builder']
+        for old in (0, 1, 2, False):
+            with self.subTest(version=old), self.assertRaisesRegex(ValueError, 'only Quality Gate V3'):
+                build(quality_gate_version=old)
+        with self.assertRaisesRegex(ValueError, 'serial graph removed'):
+            build(speculative=False)
+        for hitl in (True, False):
+            graph = build(with_hitl=hitl)
+            edges = set(graph.edges)
+            self.assertIn(('write_research_brief', 'write_draft_report'), edges)
+            self.assertIn(('write_research_brief', 'supervisor_subgraph'), edges)
+            self.assertIn((('write_draft_report', 'supervisor_subgraph'), 'precheck_quality_gate'), edges)
+            self.assertIn(('targeted_research', 'precheck_quality_gate'), edges)
+            self.assertNotIn('regenerate_research', graph.nodes)
+            self.assertNotIn('accept_research', graph.nodes)
 
-    def test_brief_always_produces_parallel_seed_generation_one(self):
+    def test_brief_unconditionally_generates_v3_checklist(self):
+        import json
+        from deep_research.evidence import parse_brief_plan
+        class JsonModel(StubModel):
+            async def ainvoke(self, *_a, **_k):
+                return types.SimpleNamespace(content=json.dumps({
+                    'research_brief': 'Analyze energy costs',
+                    'required_aspects': [{'title': 'Energy cost evidence'}],
+                }))
         fn = real_function('deep_research/agent_builder.py', 'write_research_brief', {
             'AgentState': dict,
-            'Command': type('Command', (), {'__class_getitem__': classmethod(lambda cls, x: cls)}),
             'memory_read_enabled': lambda: False,
-            'get_chat_model_auto': lambda *_args, **_kw: StubModel(),
-            'RESEARCH_BRIEF_PROMPT': DummyPrompt(),
-            'get_today_str': lambda: '2026-10-13',
+            'get_chat_model_auto': lambda *_a, **_kw: JsonModel(),
+            'RESEARCH_BRIEF_V3_PROMPT': DummyPrompt(),
+            'get_today_str': lambda: '2026-10-17',
             'HumanMessage': FakeHumanMessage,
             'build_research_seed': seed.build_research_seed,
             'seed_metrics': seed.seed_metrics,
             'render_seed_message': seed.render_seed_message,
-            'quality_gate_version_for_new_job': gate.quality_gate_version_for_new_job,
+            'parse_brief_plan': parse_brief_plan,
+            'risk_tags_for_query': gate.risk_tags_for_query,
+            'QUALITY_GATE_VERSION': 3,
             'initial_repair_limits': gate.initial_repair_limits,
             'logger': DummyLogger(),
         })
-        for raw in ('on', 'off', '', 'random'):
-            with self.subTest(raw=raw), patch.dict(os.environ, {
-                seed.SEED_LITE_ENV: raw, 'DR_QUALITY_GATE_V2': 'on',
+        for raw in ('off', 'on', '', 'other'):
+            with self.subTest(old_switch=raw), patch.dict(os.environ, {
+                'DR_QUALITY_GATE_V1': raw, 'DR_QUALITY_GATE_V2': raw,
+                'DR_QUALITY_GATE_V3': raw,
             }):
-                state = {'messages': [FakeHumanMessage('topic')]}
-                result = asyncio.run(fn(state))
-                self.assertIsInstance(result, dict)
+                result = asyncio.run(fn({'messages': [FakeHumanMessage('topic')]}))
+                self.assertEqual(result['quality_gate_version'], 3)
+                self.assertTrue(result['required_aspects'])
                 self.assertEqual(result['research_generation'], 1)
-                self.assertEqual(result['quality_gate_version'], 2)
-                self.assertEqual(result['research_brief'], 'brief-v3')
-                self.assertEqual(len(result['supervisor_messages']), 2)
-                self.assertEqual(result['quality_repair_count'], 0)
 
     def test_draft_does_not_write_seed_channel_even_for_old_state(self):
         fn = real_function('deep_research/agents/draft_agent.py', 'write_draft_report', {
@@ -174,15 +196,16 @@ class ParallelOnlyTests(unittest.TestCase):
             self.assertIs(asyncio.run(run_one(values)), expected)
         self.assertIsNone(asyncio.run(run_one(exists=False)))
 
-    def test_runner_reads_parallel_versions_without_reclassification(self):
+    def test_runner_rejects_old_checkpoint_versions(self):
         method = real_runner_method('_quality_gate_from_checkpoint')
         async def run_one(values=None, exists=True):
             fake = types.SimpleNamespace(_checkpointer=Saver(values, exists=exists))
             return await method(fake, {})
-        for version in (0, 1, 2):
-            result = asyncio.run(run_one({'research_generation': 1, 'quality_gate_version': version}))
-            self.assertEqual(result, version)
-        self.assertIsNone(asyncio.run(run_one(exists=False)))
+        for version in (0, 1, 2, None, False):
+            with self.subTest(version=version), self.assertRaises(seed.ResearchFenceError):
+                asyncio.run(run_one({'research_generation': 1, 'quality_gate_version': version}))
+        self.assertEqual(asyncio.run(run_one({'research_generation': 1, 'quality_gate_version': 3})), 3)
+        self.assertEqual(asyncio.run(run_one(exists=False)), 3)
 
 
 if __name__ == '__main__':

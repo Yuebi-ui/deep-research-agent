@@ -38,6 +38,7 @@ class ResearchTask(Base):
     thread_id: Mapped[str] = mapped_column(String(32), primary_key=True)
 
     query: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, default="local", index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     stage: Mapped[str] = mapped_column(String(50), nullable=False, default="")
 
@@ -179,6 +180,7 @@ class MemoryTemporalDecision(Base):
     __tablename__ = "memory_temporal_decisions"
 
     relation_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, default="local")
     claim_a_id: Mapped[str] = mapped_column(String(80), nullable=False)
     claim_b_id: Mapped[str] = mapped_column(String(80), nullable=False)
     decision: Mapped[str] = mapped_column(String(24), nullable=False)
@@ -196,6 +198,7 @@ class MemoryTemporalAudit(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     relation_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, default="local")
     prior_decision: Mapped[str | None] = mapped_column(String(24), nullable=True)
     decision: Mapped[str] = mapped_column(String(24), nullable=False)
     reviewer: Mapped[str] = mapped_column(String(150), nullable=False)

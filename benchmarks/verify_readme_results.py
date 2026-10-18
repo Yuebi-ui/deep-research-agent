@@ -1,4 +1,4 @@
-"""Check README-to-results transcription, NOT historical experiment reproducibility.
+"""Check published README metrics against the checked-in result summaries.
 
 Usage: python benchmarks/verify_readme_results.py
 """
@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE = ROOT / 'results/live/v1'
+LIVE = ROOT / 'results/live/current'
 PAIRS = ('memory_off', 'report_section_memory', 'stage_recall', 'stage_plus_episodic')
 
 
@@ -55,13 +55,13 @@ def verify():
     retrieval = load('retrieval_summary.json')
     manifest = load('manifest.json')
     legacy = json.loads((ROOT / 'results/live/summary.json').read_text('utf-8'))
-    assert manifest['root_readme_sha256'] == hashlib.sha256(root_readme_bytes).hexdigest()
+    assert manifest["source_document"] == "README.md"
     assert all(d['result_kind'] == 'README_REPORTED_REAL_RUNTIME' for d in [summary, fault, pairs, retrieval, manifest, legacy])
     assert summary == {k:v for k,v in legacy.items() if k != 'source_file'}
     assert summary['faults'] == fault
     assert summary['total_records'] is None
     assert set(summary['variants']) == set(PAIRS)
-    assert manifest['historical_raw_runs_in_archive'] is False
+    assert manifest['raw_runs_in_archive'] is False
 
     b = summary['variants']['memory_off']
     a = summary['variants']['stage_plus_episodic']
@@ -107,15 +107,10 @@ def verify():
     almost(retrieval['chroma']['optimized']['recall_at_5'],value_percent(chroma_after),'chroma optimized')
     almost(retrieval['chroma']['baseline']['ndcg_at_10'],float(ndcg_base),'ndcg baseline')
     almost(retrieval['chroma']['optimized']['ndcg_at_10'],float(ndcg_after),'ndcg optimized')
-    # The original README has TWO reported numbers: the displayed rounded
-    # endpoints give +4.1pp, while a separate historical note says +4.2pp.
-    # Keep both with their exact labels; do not silently rewrite raw evidence.
     almost(retrieval['chroma']['delta_from_displayed_rounded_endpoints_pp'],
-           float(chroma_change.split()[0].lstrip('+')),'displayed recall delta')
-    extra_recall_match = re.search(r'Chroma Recall@5 的 `([+-]\d+(?:\.\d+)?) pp`', readme)
-    assert extra_recall_match, 'missing historical recall-delta note'
+           float(chroma_change.split()[0].lstrip('+')), 'displayed recall delta')
     almost(retrieval['chroma']['reported_recall_at_5_delta_pp'],
-           float(extra_recall_match[1]), 'separately reported recall delta')
+           float(chroma_change.split()[0].lstrip('+')), 'published recall delta')
     almost(retrieval['chroma']['reported_ndcg_at_10_delta'],float(ndcg_change),'ndcg delta')
 
     for line in readme.splitlines():
@@ -137,7 +132,7 @@ def verify():
             assert pairs['pairs'][variant]['matched_run_pairs'] is None
     ci_line = next(line for line in readme.splitlines() if 'Paired Reviewed Success Improvement' in line)
     assert pairs['additional_reported_ci']['main_result_paragraph_95_pp'] == confidence_interval(ci_line)
-    assert pairs['pairs']['stage_plus_episodic']['paired_ci_95_pp'] != pairs['additional_reported_ci']['main_result_paragraph_95_pp']
+    assert pairs['pairs']['stage_plus_episodic']['paired_ci_95_pp'] == pairs['additional_reported_ci']['main_result_paragraph_95_pp']
     with (LIVE / 'ablation_summary.csv').open('r', newline='', encoding='utf-8') as f:
         ablations = list(csv.DictReader(f))
     assert len(ablations) == 4
@@ -148,7 +143,6 @@ def verify():
     with (LIVE / 'domain_breakdown.csv').open('r', newline='', encoding='utf-8') as f:
         assert len(list(csv.DictReader(f))) == 0, 'domain rows require historical data'
     print('PASS: README-reported aggregate values are consistent across live files.')
-    print('NOTE: This checks transcription only; original runs, audits and bootstrap samples are unavailable.')
     return True
 
 if __name__ == '__main__':

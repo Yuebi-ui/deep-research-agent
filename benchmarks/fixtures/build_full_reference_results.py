@@ -31,11 +31,11 @@ from benchmarks.run_offline import read_jsonl
 SEED = 20261009
 KIND = 'ILLUSTRATIVE_SYNTHETIC_EXAMPLE'
 VARIANTS = ('memory_off', 'report_section_memory', 'stage_recall', 'stage_plus_episodic')
-TASKS = ROOT / 'benchmarks/datasets/research_tasks.v1.jsonl'
-FAULTS = ROOT / 'benchmarks/datasets/fault_scenarios.v1.jsonl'
-RETRIEVAL = ROOT / 'results/offline/v1/retrieval_summary.json'
-PRESETS = ROOT / 'benchmarks/configs/runtime_ablation.v1.json'
-TARGET = ROOT / 'results/examples/reference_v1'
+TASKS = ROOT / 'benchmarks/datasets/research_tasks.jsonl'
+FAULTS = ROOT / 'benchmarks/datasets/fault_scenarios.jsonl'
+RETRIEVAL = ROOT / 'results/offline/current/retrieval_summary.json'
+PRESETS = ROOT / 'benchmarks/configs/runtime_ablation.json'
+TARGET = ROOT / 'results/examples/reference'
 # Fictional blended rates for arithmetic demonstrations. Not current provider prices.
 INPUT_RMB_PER_M = 28.0
 OUTPUT_RMB_PER_M = 112.0
@@ -299,7 +299,7 @@ def manifest() -> dict:
         'result_kind': KIND,
         'data_origin': 'synthetic_example',
         'seed': SEED,
-        'fixture_version': 'reference_v1',
+        'fixture_version': 'reference',
         'date_label': 'synthetic_fixture_generated_from_repo_snapshot',
         'task_data_set': {'path':str(TASKS.relative_to(ROOT)), 'sha256':sha(TASKS), 'count':60},
         'fault_catalog': {'path':str(FAULTS.relative_to(ROOT)), 'sha256':sha(FAULTS), 'count':40},
@@ -322,7 +322,7 @@ def manifest() -> dict:
             'No agents, model, vector DB, real search tool, Redis or Worker were executed.',
             'All task reviews and source-support audit counts were generated mathematically, not checked by humans.',
             'Cost uses fictional unit prices and is not a provider quote or measured invoice.',
-            'Published empirical offline fixture results remain in results/offline/v1/ and are not altered.',
+            'Published empirical offline fixture results remain in results/offline/current/ and are not altered.',
             'Successful task review is an illustrative label, not evidence of report correctness.',
         ],
     }
@@ -336,7 +336,7 @@ def overview_md(summary: dict, ablation_data: list[dict]) -> bytes:
         '',
         '> **本页所有 E2E、质量、成本和故障数据均由固定种子生成，用于演示结果结构和数值关系；不能用于声称项目已达到这些指标。**',
         '',
-        '本示例与仓库中真实执行的 [离线词法检索压力测试](../../offline/v1/README.md) 完全分开。',
+        '本示例与仓库中真实执行的 [离线词法检索压力测试](../../offline/current/README.md) 完全分开。',
         '',
         '## 研究任务消融（60 个任务 / 组，四组共 240 行合成任务记录）',
         '',
@@ -372,7 +372,7 @@ def overview_md(summary: dict, ablation_data: list[dict]) -> bytes:
         ],
         '',
         f"公开 fixture：{retrieval['data_counts']['documents']} 条文档、{retrieval['data_counts']['queries']} 个标注问题；"
-        '结果存在融合排序退化，应保留而不美化。详见 `results/offline/v1/`。',
+        '结果存在融合排序退化，应保留而不美化。详见 `results/offline/current/`。',
         '',
         '## 口径与限制',
         '',
@@ -395,7 +395,7 @@ def overview_md(summary: dict, ablation_data: list[dict]) -> bytes:
         '🔴 逐任务和逐故障观测原始记录不放入公开仓库；本地需要时可用生成器重建：',
         '',
         '```bash',
-        'python benchmarks/fixtures/build_full_reference_results.py --raw-output artifacts/benchmarks/reference_v1_raw',
+        'python benchmarks/fixtures/build_full_reference_results.py --raw-output artifacts/benchmarks/reference_raw',
         '```',
 
         '',

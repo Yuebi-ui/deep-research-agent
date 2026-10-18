@@ -41,8 +41,8 @@ REQUIRED: tuple[str, ...] = (
     "scripts/model-service/healthcheck_vllm.sh",
     "benchmarks/run_offline.py",
     "benchmarks/run_live.py",
-    "results/offline/v1/retrieval_summary.json",
-    "results/offline/v1/manifest.json",
+    "results/offline/current/retrieval_summary.json",
+    "results/offline/current/manifest.json",
 )
 
 PRIVATE_PATHS: tuple[str, ...] = (
@@ -53,9 +53,9 @@ PRIVATE_PATHS: tuple[str, ...] = (
     "config.yml",
     "data/tasks.db",
     "data/research_episodes.sqlite3",
-    "results/offline/v1/retrieval_per_query.jsonl",
-    "results/examples/reference_v1/task_runs.synthetic.jsonl",
-    "results/examples/reference_v1/fault_observations.synthetic.jsonl",
+    "results/offline/current/retrieval_per_query.jsonl",
+    "results/examples/reference/task_runs.synthetic.jsonl",
+    "results/examples/reference/fault_observations.synthetic.jsonl",
 )
 
 RETIRED_DEPLOYMENT_FILES: tuple[str, ...] = (

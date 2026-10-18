@@ -1,0 +1,44 @@
+{
+  "chroma_query_records_in_archive": false,
+  "code_revision_for_original_experiments": null,
+  "data_origin": "project_reported_measurements",
+  "dataset_hash_for_original_experiments": null,
+  "fault_events_in_archive": false,
+  "independent_reviews_in_archive": false,
+  "missing_details": [
+    "exact trial counts / per-group success numerators",
+    "audited claim/citation denominators",
+    "per-domain E2E breakdown",
+    "fault-type outcomes and durations",
+    "original bootstrap samples for both CI values",
+    "provider billing / unit prices"
+  ],
+  "model_and_embedding_versions": null,
+  "not_the_source_of_live_data": [
+    "benchmarks/fixtures/build_full_reference_results.py (synthetic fixture only)",
+    "results/offline/current/fault_plan_status.json (public offline fault plan only)",
+    "benchmarks/datasets/research_tasks.jsonl (60 public prompts, not proven to be the reported 30-task run set)"
+  ],
+  "published_live_files": [
+    "results/live/current/e2e_summary.json",
+    "results/live/current/fault_summary.json",
+    "results/live/current/retrieval_summary.json",
+    "results/live/current/paired_comparisons.json",
+    "results/live/current/ablation_summary.csv"
+  ],
+  "raw_runs_in_archive": false,
+  "reporting_basis": "current project measurements as published in README",
+  "result_kind": "README_REPORTED_REAL_RUNTIME",
+  "run_date": null,
+  "sample_sizes": {
+    "agent_per_variant_run_observations": null,
+    "agent_total_run_observations": null,
+    "agent_unique_tasks_reported": 30,
+    "agent_variants_reported": 4,
+    "chroma_retrieval_queries_reported": 120,
+    "fault_runs_reported": 40
+  },
+  "source_document": "README.md",
+  "source_traceability": "Published aggregates are checked against README and stored summary files; detailed run-level observations are not in this archive.",
+  "verification_command": "python benchmarks/verify_readme_results.py"
+}

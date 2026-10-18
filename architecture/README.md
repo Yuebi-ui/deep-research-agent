@@ -113,4 +113,4 @@ Shared process-local memory clients are created by
 - Historical memory is not current evidence.
 - Temporal "possible change" records are candidates; explicit review creates the
   authoritative decision.
-- The repository does not currently provide tenant-isolated memory.
+- Memory, task history and the temporal-review ledger are scoped to server-authenticated users. Chroma and episode stores live in account-isolated data directories.

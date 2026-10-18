@@ -54,6 +54,7 @@ load_env() {
   export CONFIG_PATH="${CONFIG_PATH:-config.yml}"
   export CHECKPOINTER_BACKEND="${CHECKPOINTER_BACKEND:-redis}"
   export API_PORT="${API_PORT:-8000}"
+  export API_HOST="${API_HOST:-127.0.0.1}"
 
   # 相对路径按项目根解析（应用侧也是这么做的）
   case "$CONFIG_PATH" in

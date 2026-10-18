@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Phase 5B A/B 驱动：CONTROL（串行）vs TREATMENT（seed-lite speculative，productionized）。
 #
-#     bash scripts/experiments/phase5b_ab_driver.sh --arm control|treatment|both [--queries q1 z2] [--round r2] [--review-action approve|revise,approve]
+#     bash scripts/experiments/phase5b_ab_driver.sh --arm control|treatment|both [--queries q1 z2] [--round r2] [--review-action approve|revise_draft,approve]
 #
 # 与 Phase 5A 的差别：
 #   - 工作负载扩展为 8 个查询：q1–q4（与 5A 相同，保证可比性）+ z1–z4（中文，
 #     取自 tests/eval_dataset.json，覆盖 5A 报告明确未覆盖的多语言盲区）；
-#   - 支持 --review-action 序列（如 revise,approve）以在真实 runtime 上验证
+#   - 支持 --review-action 序列（如 revise_draft,approve）以在真实 runtime 上验证
 #     reject → regenerate → accept 路径（run_baseline 会按序消费 review 动作）；
 #   - run-id 前缀 p5b-。
 #

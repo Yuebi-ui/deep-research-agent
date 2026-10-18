@@ -23,6 +23,7 @@ class ResearcherState(TypedDict):
     researcher_messages: Annotated[Sequence[BaseMessage], add_messages]
     tool_call_iterations: int
     research_topic: str
+    quality_gate_version: int  # V3 uses out-of-band provider provenance receipts
     compressed_research: str
     raw_notes: Annotated[List[str], operator.add]
     seen_urls: Annotated[List[str], operator.add]  # 已搜索过的 URL，跨迭代去重
@@ -30,6 +31,7 @@ class ResearcherState(TypedDict):
     researcher_memory_hint: str
     researcher_memory_round: int
     episode_trace: dict
+    observed_sources: list[dict]  # V3 derived from search ToolMessages, never model summaries
 
 
 class ResearcherOutputState(TypedDict):
@@ -42,6 +44,7 @@ class ResearcherOutputState(TypedDict):
     seen_urls: Annotated[List[str], operator.add]
     # A bounded, observed record of actual search tool activity.
     episode_trace: dict
+    observed_sources: list[dict]  # V3 derived from search ToolMessages, never model summaries
 
 
 # ===== STRUCTURED OUTPUT SCHEMAS =====

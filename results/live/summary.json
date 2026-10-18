@@ -1,6 +1,6 @@
 {
   "cost_is_hypothetical": null,
-  "data_origin": "historical_real_metrics_reported_in_root_readme",
+  "data_origin": "project_reported_measurements",
   "faults": {
     "audit_note": "38/40 comes from root README. Unknown per-type outcomes, durations and integrity counters are not inferred from the prior synthetic fixture.",
     "coverage_by_type": {
@@ -11,7 +11,7 @@
       "research_worker_termination": 8
     },
     "coverage_by_type_scope": "public fault scenario catalog only; historical executed-type breakdown unavailable",
-    "data_origin": "historical_real_metrics_reported_in_root_readme",
+    "data_origin": "project_reported_measurements",
     "duplicate_writes": null,
     "idempotency_violations": null,
     "lost_jobs": null,
@@ -36,7 +36,7 @@
   "reported_unique_tasks_per_variant": 30,
   "result_kind": "README_REPORTED_REAL_RUNTIME",
   "source_document": "README.md / 评测与消融 / 实测结果与消融分析",
-  "source_file": "results/live/v1/e2e_summary.json",
+  "source_file": "results/live/current/e2e_summary.json",
   "source_status": "historical measured metrics asserted by project owner; source runs not retained in archive",
   "total_records": null,
   "variants": {

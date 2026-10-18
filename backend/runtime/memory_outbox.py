@@ -58,6 +58,7 @@ class ClaimedJob:
     attempts: int
     report_done: bool
     episodes_done: bool
+    user_id: str = "local"
 
 
 class MemoryOutboxStore:
@@ -104,6 +105,7 @@ class MemoryOutboxStore:
                     query=row.query, episode_payload=list(row.episode_payload or []),
                     token=token, attempts=row.attempts,
                     report_done=bool(row.report_done), episodes_done=bool(row.episodes_done),
+                    user_id=session.get(ResearchTask, row.task_id).user_id,
                 )
         return None
 
@@ -162,6 +164,8 @@ class MemoryOutboxStore:
             task = session.get(ResearchTask, job.task_id)
             if not task or task.status != "completed":
                 raise RuntimeError("outbox task missing or no longer completed")
+            if task.user_id != job.user_id:
+                raise RuntimeError("outbox owner mismatch; refusing cross-user memory access")
             if hashlib.sha256(task.final_report.encode("utf-8")).hexdigest() != job.report_sha256:
                 raise RuntimeError("completed report fingerprint mismatch; refuse to enrich unrelated content")
             return task.final_report
@@ -250,13 +254,15 @@ class MemoryOutboxProcessor:
         try:
             # Even on episode-only retries, ensure the parent task has not been
             # deleted or changed since the original outbox was committed.
-            report = await asyncio.to_thread(self.store.get_task_report, job)
-            if not job.report_done:
-                doc_id = await asyncio.to_thread(self.report_writer, job.query, report)
-                await asyncio.to_thread(self.store.report_finished, job, doc_id)
-            if not job.episodes_done:
-                await asyncio.to_thread(self.episode_writer, job.episode_payload)
-                await asyncio.to_thread(self.store.episodes_finished, job)
+            from deep_research.memory.tenant import memory_user_scope
+            with memory_user_scope(job.user_id):
+                report = await asyncio.to_thread(self.store.get_task_report, job)
+                if not job.report_done:
+                    doc_id = await asyncio.to_thread(self.report_writer, job.query, report)
+                    await asyncio.to_thread(self.store.report_finished, job, doc_id)
+                if not job.episodes_done:
+                    await asyncio.to_thread(self.episode_writer, job.episode_payload)
+                    await asyncio.to_thread(self.store.episodes_finished, job)
             await asyncio.to_thread(self.store.complete, job)
             logger.info("Memory outbox completed %s", job.job_id)
         except LeaseLost as exc:

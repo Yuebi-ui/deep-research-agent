@@ -6,7 +6,7 @@
 - 投机模式下**真图离线跑通**（fake 模型）：fan-out 并行、join 正确、
   supervisor 拿到的是 seed 而不是 draft。
 
-注：conftest 为确定性把 env 统一钉为 off；本文件内需要 on 的用例显式覆盖。
+注：历史 seed 环境开关不再改变 V3 执行拓扑。
 """
 
 from __future__ import annotations
@@ -119,10 +119,10 @@ def test_speculative_topology_fans_out_and_joins(monkeypatch):
     assert ("write_research_brief", "write_draft_report") in edges
     assert ("write_research_brief", "supervisor_subgraph") in edges
     assert ("build_research_seed", "supervisor_subgraph") not in edges
-    # join（Phase 5B：无 HITL 构建下汇入 accept_research —— fence 校验后并入 notes）
-    assert ("write_draft_report", "accept_research") in edges
-    assert ("supervisor_subgraph", "accept_research") in edges
-    assert ("accept_research", "claim_verification") in edges
+    # V3-only AND-join: all candidate evidence goes through structural precheck.
+    assert ("write_draft_report", "precheck_quality_gate") in edges
+    assert ("supervisor_subgraph", "precheck_quality_gate") in edges
+    assert ("precheck_quality_gate", "claim_verification") not in edges
     # 串行边必须消失（否则 research 又要等 draft）
     assert ("write_draft_report", "supervisor_subgraph") not in edges
     assert ("supervisor_subgraph", "claim_verification") not in edges
@@ -159,13 +159,16 @@ def _run_graph(order_out: list, *, speculative: bool, supersteps: list | None = 
     return asyncio.run(collect())
 
 
-def test_speculative_graph_converges_offline(monkeypatch):
+def test_v3_no_hitl_is_not_an_auto_accept_path(monkeypatch):
+    """V3 may compile without HITL for testing but must not auto-publish."""
+    from deep_research.research_seed import ResearchFenceError
+
     monkeypatch.setenv(SEED_LITE_ENV, "on")
     order: list[str] = []
-    final = _run_graph(order, speculative=True)
-
-    assert final.get("final_report"), f"未产出 final_report；节点顺序={order}"
-    assert "write_draft_report" in order and "supervisor_subgraph" in order
+    with pytest.raises(ResearchFenceError, match="human review"):
+        _run_graph(order, speculative=True)
+    assert "write_draft_report" in order
+    assert "supervisor_subgraph" in order
 
 
 def test_speculative_hitl_approve_goes_to_claim_verification(monkeypatch):
@@ -240,24 +243,32 @@ def test_speculative_branches_overlap_in_time(monkeypatch):
 
     async def run():
         t0 = time.monotonic()
-        await graph.ainvoke(state, config={"recursion_limit": 30})
+        try:
+            await graph.ainvoke(state, config={"recursion_limit": 30})
+        except Exception as exc:
+            from deep_research.research_seed import ResearchFenceError
+            # Stubbed research has no valid checklist-bound source ledger:
+            # the subsequent V3 fence must reject it, but only *after* both
+            # parallel branch calls have completed.
+            assert isinstance(exc, ResearchFenceError), exc
         return time.monotonic() - t0
 
     elapsed = asyncio.run(run())
     assert elapsed < 0.55, f"两条分支没有并行（{elapsed:.2f}s ≈ 0.3+0.3）"
 
 
-def test_speculative_graph_seeds_supervisor_with_seed_not_draft(monkeypatch):
-    """supervisor 的首轮上下文必须是 seed 消息，而不是 'Here is the draft report'。"""
-    monkeypatch.setenv(SEED_LITE_ENV, "on")
+def test_v3_supervisor_receives_seed_not_draft(monkeypatch):
+    """The Supervisor gets the independent research seed, not Draft output."""
     from deep_research.agent_builder import _create_builder
+    from langgraph.checkpoint.memory import InMemorySaver
 
-    graph = _create_builder(with_hitl=False).compile()
+    graph = _create_builder(with_hitl=True).compile(checkpointer=InMemorySaver())
     state = {"messages": [HumanMessage(content="Compare LangGraph and CrewAI")]}
-    out = asyncio.run(graph.ainvoke(state, config={"recursion_limit": 60}))
-
+    cfg = {"configurable": {"thread_id": "seed-v3"}, "recursion_limit": 60}
+    asyncio.run(graph.ainvoke(state, config=cfg))
+    out = asyncio.run(graph.aget_state(cfg)).values
     msgs = out.get("supervisor_messages") or []
     texts = [m.content if hasattr(m, "content") else str(m) for m in msgs]
     joined = "\n".join(texts)
-    assert "Research seed" in joined, f"未注入 seed：{texts[:2]}"
-    assert "Here is the draft report" not in joined, "draft 分支仍在写 supervisor_messages（会与 seed 合并）"
+    assert "Research seed" in joined, f"Seed was not injected: {texts[:2]}"
+    assert "Here is the draft report" not in joined

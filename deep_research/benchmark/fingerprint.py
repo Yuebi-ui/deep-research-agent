@@ -261,7 +261,7 @@ def build_config_snapshot(
         # The preset definitions themselves are part of the reproducibility
         # contract even when experiment A/B flags are read from worker env.
         "memory_presets_sha256": hashlib.sha256(
-            (Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.v1.json").read_bytes()
+            (Path(__file__).resolve().parents[2] / "benchmarks/configs/runtime_ablation.json").read_bytes()
         ).hexdigest(),
     }
     return scrub_secrets(snapshot)

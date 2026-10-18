@@ -54,7 +54,7 @@ class TaskCreatedResponse(BaseModel):
 class TaskSummaryResponse(BaseModel):
     """任务状态快照。
 
-    字段与改造前的 `agent_service.get_task_status()` 输出一致，
+    任务状态通过数据库投影返回，
     另加 Phase G 引入的运行时元数据（attempt / cancel_requested）。
     """
 

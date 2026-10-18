@@ -221,7 +221,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runs', type=Path, required=True)
-    parser.add_argument('--tasks', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'research_tasks.v1.jsonl')
+    parser.add_argument('--tasks', type=Path, default=ROOT / 'benchmarks' / 'datasets' / 'research_tasks.jsonl')
     parser.add_argument('--prepare', action='store_true', help='Create UNREVIEWED annotation templates')
     parser.add_argument('--audits', type=Path, help='Completed external review records (required unless --prepare)')
     parser.add_argument('--output', type=Path, default=ROOT / 'artifacts' / 'benchmarks' / 'reviewed_runs.jsonl')

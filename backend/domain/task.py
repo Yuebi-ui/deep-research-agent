@@ -139,12 +139,12 @@ def ensure_transition(current: TaskStatus, target: TaskStatus) -> None:
 
 # ===== 由 stage 推导状态 =====
 #
-# 收敛自 backend/services/agent_service.py 中原本散落的 status_map。
+# The runtime maps LangGraph stages onto persisted task states.
 # 未列出的 stage 一律视为"执行中"。
 
 STAGE_TO_STATUS: dict[str, TaskStatus] = {
     "human_review": TaskStatus.WAITING_REVIEW,
-    "human_review_v2": TaskStatus.WAITING_REVIEW,
+    "human_review_v3": TaskStatus.WAITING_REVIEW,
     "final_report_generation": TaskStatus.COMPLETED,
 }
 

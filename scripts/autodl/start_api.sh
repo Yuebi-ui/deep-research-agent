@@ -29,7 +29,7 @@ info "CONFIG_PATH=${CONFIG_PATH}"
 
 start_daemon "api" "${LOG_DIR}/api.log" "uvicorn" \
   "$PY" -m uvicorn backend.main:app \
-    --host 0.0.0.0 --port "$API_PORT" --workers 1
+    --host "$API_HOST" --port "$API_PORT" --workers 1
 
 wait_for_http "http://127.0.0.1:${API_PORT}/api/health" "API" 60 \
   || die "API 未就绪，请查看 ${LOG_DIR}/api.log"

@@ -4,7 +4,7 @@
 
     backend.domain     纯业务规则（无基础设施依赖）
     backend.db         模型 / engine / session / repository 实现
-    backend.services   把域规则与持久化组合（业务服务）
+    backend.runtime    Worker 与 API 的任务执行路径
 
 当前唯一受支持的数据库后端是 **SQLite**。
 MySQL 已移除：

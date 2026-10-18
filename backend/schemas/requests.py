@@ -19,13 +19,13 @@ class ResearchRequest(BaseModel):
 class ReviewAction(BaseModel):
     """Human Review 审查决定。"""
     action: str = Field(
-        ..., pattern="^(approve|revise|revise_draft|more_research)$",
-        description="审查动作；V2 支持结构调整 revise_draft 与定向补研 more_research",
+        ..., pattern="^(approve|revise_draft|more_research)$",
+        description="V3：approve、revise_draft、more_research",
     )
-    feedback: str = Field(default="", description="修改草稿或定向补研的具体要求；V2 专用动作限 500 字")
+    feedback: str = Field(default="", description="修改草稿或定向补研的具体要求；V3 限 500 字")
 
     @model_validator(mode="after")
     def validate_research_request(self):
         if self.action in ("more_research", "revise_draft") and not (0 < len(self.feedback.strip()) <= 500):
-            raise ValueError("V2 more_research/revise_draft require 1-500 characters of feedback")
+            raise ValueError("V3 more_research/revise_draft require 1-500 characters of feedback")
         return self

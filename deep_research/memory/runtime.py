@@ -12,7 +12,6 @@ handled by the durable outbox lease/fencing layer, not by this module.
 from __future__ import annotations
 
 import threading
-from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from deep_research.settings import get_engine_settings
@@ -21,40 +20,40 @@ if TYPE_CHECKING:
     from deep_research.memory.episodes import EpisodeMemoryStore
     from deep_research.memory.manager import MemoryManager
 
-_manager: Any = None
 _manager_lock = threading.Lock()
+_managers: dict[tuple[str, str], Any] = {}
+_episodes: dict[tuple[str, str], Any] = {}
 
 
 def get_memory_manager() -> "MemoryManager":
-    """Return the shared process-local :class:`MemoryManager` instance."""
-    global _manager
-    if _manager is None:
-        # Heavy import stays behind first use so offline utilities can import the
-        # memory package without installing/initializing the full LLM stack.
-        from deep_research.memory.manager import MemoryManager
-
-        # Supervisor/Researcher lookups may race on first use. Constructing one
-        # shared client avoids duplicate Chroma/embedding initialization.
-        with _manager_lock:
-            if _manager is None:
-                _manager = MemoryManager(
-                    persist_dir=str(get_engine_settings().resolved_memory_data_dir / "chroma")
-                )
-    return _manager
+    """Return a cached manager for the trusted, task-bound user only."""
+    from deep_research.memory.tenant import current_user_id, tenant_memory_dir
+    owner = current_user_id()
+    root = get_engine_settings().resolved_memory_data_dir.resolve()
+    key = (str(root), owner)
+    with _manager_lock:
+        if key not in _managers:
+            from deep_research.memory.manager import MemoryManager
+            data_dir = tenant_memory_dir(root, owner)
+            _managers[key] = MemoryManager(persist_dir=str(data_dir / "chroma"))
+        return _managers[key]
 
 
-@lru_cache(maxsize=1)
 def get_episode_store() -> "EpisodeMemoryStore":
-    """Return the process-local episodic-memory store for the configured data dir."""
-    from deep_research.memory.episodes import EpisodeMemoryStore
-
-    path = get_engine_settings().resolved_memory_data_dir / "research_episodes.sqlite3"
-    return EpisodeMemoryStore(path)
-
+    """Episode SQLite lives in the same per-owner directory as Chroma."""
+    from deep_research.memory.tenant import current_user_id, tenant_memory_dir
+    owner = current_user_id()
+    root = get_engine_settings().resolved_memory_data_dir.resolve()
+    key = (str(root), owner)
+    with _manager_lock:
+        if key not in _episodes:
+            from deep_research.memory.episodes import EpisodeMemoryStore
+            path = tenant_memory_dir(root, owner) / "research_episodes.sqlite3"
+            _episodes[key] = EpisodeMemoryStore(path)
+        return _episodes[key]
 
 def reset_memory_runtime() -> None:
-    """Reset process-local clients without deleting persisted data."""
-    global _manager
+    """Clear process-local clients; persisted per-owner files remain untouched."""
     with _manager_lock:
-        _manager = None
-    get_episode_store.cache_clear()
+        _managers.clear()
+        _episodes.clear()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""V1 Baseline Runner —— 跑一次未经优化的真实 Deep Research 任务并产出机器可读 artifacts。
+"""Baseline Runner —— 跑一次未经优化的真实 Deep Research 任务并产出机器可读 artifacts。
 
     .venv/bin/python scripts/run_baseline.py
 
@@ -44,7 +44,7 @@ BASELINE_CASE: dict = {
     "case_id": "hybrid-e2e-langgraph-2026-10-05",
     "query": "What is LangGraph and what are its main use cases?",
     "review_action": "approve",
-    "variant": "v1_baseline",
+    "variant": "baseline",
 }
 
 _TERMINAL_STATUSES = {"completed", "failed", "cancelled", "deleted"}
@@ -56,10 +56,17 @@ DEFAULT_EXPECTED_CONTEXT_LIMIT = 8192
 # ===== HTTP 小工具（stdlib，避免额外依赖）=====
 
 
+def _api_headers() -> dict[str, str]:
+    # Operator-provided token. Never log it or include it in benchmark artifacts.
+    import os
+    token = os.getenv("DR_BENCHMARK_API_TOKEN", "").strip()
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
 def _post_json(url: str, payload: dict, timeout: float = 30.0) -> dict:
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        url, data=data, headers={"Content-Type": "application/json", **_api_headers()}, method="POST"
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
@@ -70,7 +77,7 @@ def _post_json(url: str, payload: dict, timeout: float = 30.0) -> dict:
 
 
 def _get_json(url: str, timeout: float = 15.0) -> dict:
-    req = urllib.request.Request(url, method="GET")
+    req = urllib.request.Request(url, headers=_api_headers(), method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             return json.loads(resp.read().decode("utf-8"))
@@ -169,9 +176,9 @@ def _memory_doc_count() -> int | None:
         from deep_research.memory.vector_store import VectorMemoryStore
         from deep_research.settings import get_engine_settings
 
-        store = VectorMemoryStore(
-            persist_dir=str(get_engine_settings().resolved_memory_data_dir / "chroma")
-        )
+        from deep_research.memory.tenant import current_user_id, tenant_memory_dir
+        scoped = tenant_memory_dir(get_engine_settings().resolved_memory_data_dir, current_user_id())
+        store = VectorMemoryStore(persist_dir=str(scoped / "chroma"))
         return int(store.count())
     except Exception:
         return None
@@ -237,10 +244,8 @@ def wait_for_terminal(
 
     `review_actions` 支持**序列**（Phase 5B：验证 reject → regenerate → accept）：
 
-    - 字符串 "approve" / "revise"：单调行为，但 `revise` 在投机拓扑下会**再次**
-      回到 waiting_review —— 若同一 action 一直重复提交会形成 revise 死循环；
-    - 逗号序列（如 "revise,approve"）：按序消费，末尾动作对后续每次等待重复。
-      例：`revise,approve` = 第一次 revise（触发最坏路径研究重跑）→ 之后 approve。
+    - 字符串 "approve" / "revise_draft" / "more_research"：对应当前人工审核动作；
+    - 逗号序列（如 "revise_draft,approve"）：依次消费，末尾动作持续用于后续等待。
     """
     actions = (
         [a.strip() for a in review_actions.split(",") if a.strip()]
@@ -263,7 +268,7 @@ def wait_for_terminal(
             action = actions[min(review_count, len(actions) - 1)]
             _post_json(
                 f"{api_base}/api/research/{thread_id}/resume",
-                {"action": action, "feedback": "phase5b automatic rejection" if action == "revise" else ""},
+                {"action": action, "feedback": "Please revise the report to clarify reasoning." if action == "revise_draft" else ("Please research missing evidence." if action == "more_research" else "")},
             )
             review_submitted = True
             review_count += 1
@@ -508,14 +513,13 @@ def _write_preflight_report(run_id: str, payload: dict) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="V1 Baseline Runner (Phase 3C P1: fingerprint + preflight)")
+    parser = argparse.ArgumentParser(description="Benchmark Baseline Runner (fingerprint + preflight)")
     parser.add_argument("--api-base", default="http://127.0.0.1:8000")
     parser.add_argument("--query", default=BASELINE_CASE["query"])
     parser.add_argument("--review-action", default=BASELINE_CASE["review_action"],
-                        help="approve | revise | 逗号序列（如 revise,approve —— Phase 5B "
-                             "reject→regenerate→accept 验证；末尾动作对后续等待重复）")
+                        help="approve | revise_draft | more_research；支持逗号序列如 revise_draft,approve")
     parser.add_argument("--run-id", default=None,
-                        help="默认 v1baseline-<UTC时间戳>-<4位随机>")
+                        help="默认 baseline-<UTC时间戳>-<4位随机>")
     parser.add_argument("--out-dir", type=Path, default=REPO_ROOT / "artifacts" / "baseline")
     parser.add_argument("--poll-interval", type=float, default=5.0)
     parser.add_argument("--timeout", type=float, default=2700.0, help="等待终态的秒数")
@@ -548,7 +552,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     run_id = args.run_id or (
-        "v1baseline-" + datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:4]
+        "baseline-" + datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:4]
     )
     out_dir = args.out_dir / run_id
     if out_dir.exists() and not args.force:
@@ -605,7 +609,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         allow_stale_services=args.allow_stale_services,
         memory_preset=(args.variant if args.variant in json.loads(
-            (REPO_ROOT / "benchmarks/configs/runtime_ablation.v1.json").read_text(encoding="utf-8")
+            (REPO_ROOT / "benchmarks/configs/runtime_ablation.json").read_text(encoding="utf-8")
         )["variants"] else None),
     )
     print("[baseline] preflight self-check ...")

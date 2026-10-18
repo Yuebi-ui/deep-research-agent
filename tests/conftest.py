@@ -157,11 +157,7 @@ def _reset_all_state():
             import backend.main as main_module
             from backend.db import reset_repository
             from backend.runtime import redis as rt_redis
-            from backend.services import agent_service, sse_adapter
-
             reset_repository()
-            agent_service._agent_cache = None
-            sse_adapter._agent_trace = None
 
             # Phase G：runtime 的 Redis 连接与 checkpointer 都是模块级缓存，
             # 不重置会跨用例串状态（尤其是测试各自指向不同 DB 时）。

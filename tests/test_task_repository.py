@@ -228,17 +228,11 @@ def test_repository_rejects_arbitrary_column_update(repo):
         assert not has_var_kwargs, f"{name}() 不应接受 **kwargs"
 
 
-def test_service_rejects_arbitrary_field_update(repo):
-    """service 层的 transition_task 同样不接受任意字段名。"""
-    from backend.services import agent_service as svc
-
-    task = repo.create("svc1", "q")
+def test_task_owner_is_not_an_untyped_repository_update(repo):
+    task = repo.create("svc1", "q", user_id="alice")
+    assert task.user_id == "alice"
     with pytest.raises(TypeError):
-        svc.transition_task(
-            task.thread_id,
-            TaskStatus.RUNNING,
-            definitely_not_a_column="boom",
-        )
+        repo.save(task, user_id="bob")
 
 
 def test_repository_protocol_is_defined():
